@@ -1,0 +1,12 @@
+
+sudo pip install linux-tools-5.15.0-88-generic
+sudo pip install pip
+sudo pip install matplotlib
+sudo pip install progressbar2
+sudo pip install pandas
+sudo pip install seaborn
+pip install --upgrade numexpr
+pip install --upgrade numpy scipy
+pip insatll vaex
+pip install xarray
+sudo apt install mpv
