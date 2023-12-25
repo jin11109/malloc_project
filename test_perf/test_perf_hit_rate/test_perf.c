@@ -9,50 +9,6 @@
 #include <sys/wait.h>
 #include <time.h>
 #include <unistd.h>
-/*
-int main() {
-    pid_t child = fork();
-    int* flag1 = mmap(NULL, sizeof(int), PROT_READ | PROT_WRITE | PROT_EXEC,
-                      MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
-    int* flag2 = mmap(NULL, sizeof(int), PROT_READ | PROT_WRITE | PROT_EXEC,
-                      MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
-    *flag1 = 1;
-    *flag2 = 0;
-
-    if (child == 0) {
-        int target = 0;
-        printf("target address : %d\n", &target);
-        while (*flag1) {
-            while (*flag2) {
-                target++;
-            }
-        }
-    } 
-    else {
-        pid_t child2 = fork();
-        if (child2 == 0) {
-            int test_round = 100;
-            for (int i = 0; i < test_round; i++){
-                for (int j = 0; j < 180; j++){
-                    sleep(1);
-                    double sleep_time =
-                }
-            }
-        } 
-        else {
-            char pid_str[100];
-            printf("pid = %d\n", child);
-            sprintf(pid_str, "%d", child);
-            char* perf_command[128] = {
-                "perf", "record", "-e", "ibs_op//", "-F",
-                "max",  "--running-time", "--data", "-p", pid_str};
-            wait(NULL);
-            wait(NULL);
-        }
-    }
-}
-*/
-
 
 int main(){
     int child = fork();

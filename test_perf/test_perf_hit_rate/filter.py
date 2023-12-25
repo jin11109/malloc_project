@@ -24,14 +24,14 @@ with open("./script.log", "r") as script:
     start_time = script_time
 
 with open("./script.log", "r") as script:
-    script.seek(0, 2)
+    script.seek(0, 2) # seek end
     end_position = script.tell()
     script.seek(end_position - 500, 0)
 
     lines = script.readlines()
 
-    if len(lines) >= 2:  # 判断是否最后至少有两行，这样保证了最后一行是完整的
-        data = lines[-1]  # 取最后一行
+    if len(lines) >= 2:  # ensure the last list is complete
+        data = lines[-1]  
         temp = data.strip()
         info = re.split(r'\s+', temp)
         index = 0

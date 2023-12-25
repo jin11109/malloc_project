@@ -3,10 +3,10 @@
 echo -1 | sudo tee /proc/sys/kernel/perf_event_paranoid > /dev/null
 echo 0 | sudo tee /proc/sys/kernel/kptr_restrict > /dev/null
 echo 0 | sudo tee /proc/sys/kernel/randomize_va_space > /dev/null
-echo 100000 | sudo tee /proc/sys/kernel/perf_event_max_sample_rate > /dev/null
+echo 200000 | sudo tee /proc/sys/kernel/perf_event_max_sample_rate > /dev/null
 # 39750
 
-# compile preload program
+# compile program
 gcc -O0 ./test_perf.c -o ./test_perf -lm
 
 ./test_perf
