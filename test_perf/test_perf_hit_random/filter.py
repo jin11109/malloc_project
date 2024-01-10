@@ -2,14 +2,15 @@ import csv
 import re
 
 target_addr = int(input("input address : "), 16)
-target_addr_end = int(input("input address end :"), 16)
+target_addr_end = int(input("input address end : "), 16)
 pid = int(input("input pid : "), 10)
+element_num = int(input("input element num : "), 10)
 f = open("./result.csv", 'w')
 writer = csv.writer(f)
 writer.writerow(["data_addr", "count"])
 
 #result = {}
-result = [0] * 1000
+result = [0] * element_num
 
 with open("./script.log", "r") as script:
     while True:
