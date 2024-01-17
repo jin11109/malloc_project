@@ -9,7 +9,7 @@ fi
 echo -1 | sudo tee /proc/sys/kernel/perf_event_paranoid > /dev/null
 echo 0 | sudo tee /proc/sys/kernel/kptr_restrict > /dev/null
 echo 0 | sudo tee /proc/sys/kernel/randomize_va_space > /dev/null
-echo 400000 | sudo tee /proc/sys/kernel/perf_event_max_sample_rate > /dev/null
+echo 150000 | sudo tee /proc/sys/kernel/perf_event_max_sample_rate > /dev/null
 # 39750
 
 # compile preload program
@@ -54,21 +54,20 @@ fi
 
 # start 
 python3 ./data_record.py &
-perf record -e ibs_op// -F max --running-time --data -o ./myperf.data ./program.sh
+perf record -e ibs_op//pp -F max --running-time --data -o ./myperf.data ./program.sh
 perf script -F +addr,+time,+data_src --ns -i ./myperf.data >> ./fifo
 
 # wait for ./data_capturer.py
 wait
 
 rm ./fifo
-perf report -i ./myperf.data
 
 # set enviroment
 echo 4 | sudo tee /proc/sys/kernel/perf_event_paranoid > /dev/null
 echo 1 | sudo tee /proc/sys/kernel/kptr_restrict > /dev/null
 echo 2 | sudo tee /proc/sys/kernel/randomize_va_space > /dev/null
 
-#python3 ./data_merge.py
-#python3 ./data_show.py
+python3 ./data_merge.py
+python3 ./data_show.py
 
 #rm -r ./data
