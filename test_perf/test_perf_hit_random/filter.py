@@ -7,9 +7,8 @@ pid = int(input("input pid : "), 10)
 element_num = int(input("input element num : "), 10)
 f = open("./result.csv", 'w')
 writer = csv.writer(f)
-writer.writerow(["data_addr", "count"])
+writer.writerow(["data_index", "count"])
 
-#result = {}
 result = [0] * element_num
 
 with open("./script.log", "r") as script:
@@ -30,7 +29,7 @@ with open("./script.log", "r") as script:
         data_addr = int(info[index + 4], 16)
         
         if script_pid == pid and (data_addr < target_addr_end and data_addr >= target_addr):
-            data_index = int((data_addr - target_addr) / 4)
+            data_index = int((data_addr - target_addr) / 8)
             result[data_index] += 1
         else:
             continue

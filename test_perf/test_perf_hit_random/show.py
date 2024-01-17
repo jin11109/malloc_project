@@ -4,12 +4,10 @@ import seaborn as sns
 
 df = pd.read_csv("./result.csv")
 
-df["std"] = (df["count"] - df["count"].mean()) / df["count"].std()
 print(df)
 print("count sum", df["count"].sum())
 
 plt.figure()
-#sns.lineplot(data=df, x="std", y="std")
-sns.kdeplot(data=df, x="std")
+sns.histplot(x=df["data_index"], weights=df["count"], bins=100)
 
 plt.show()

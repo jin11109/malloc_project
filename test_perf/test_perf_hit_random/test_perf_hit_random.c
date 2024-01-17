@@ -10,37 +10,30 @@
 #include <sys/wait.h>
 #include <time.h>
 #include <unistd.h>
+#include <stdatomic.h>
 
-int target_num = 1000;
-int target[10000];
+#define MEGA << 20
+#define KILO << 10
 
-// yield [0, n) rand number
-int randint(int n) {
-    if ((n - 1) == RAND_MAX) {
-        return rand();
-    } else {
-        long end = RAND_MAX / n;
-        assert(end > 0L);
-        end *= n;
-        // discard the value exceed end
-        int r;
-        while ((r = rand()) >= end)
-            ;
-
-        return r % n;
-    }
-}
+int target_num = (16 MEGA);
+long long int target[(16 MEGA)];
 
 int main(){
-    srand(5);
+    srand48(1);
+
     printf("target start : %p\n", target);
     printf("target end : %p\n", target + target_num);
     printf("pid : %d\n", getpid());
     printf("element num : %d\n", target_num);
+    printf("size : %ld\n", sizeof(target));
 
-    long long int n = 10000000000;
+    long long int n = 1;
+    n = n << 34; // ~= 1.72 * 10^10
     int temp = 0;
     for (long long int i = 0; i < n; i++) {    
-        temp += target[randint(target_num)];
-    }   
+        int index = lrand48() % target_num;
+        temp += atomic_load_explicit(&target[index], memory_order_relaxed);;
+    }
+    printf("temp : %d\n", temp);
+
 }
