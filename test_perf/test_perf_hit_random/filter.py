@@ -11,6 +11,7 @@ writer.writerow(["data_index", "count"])
 
 result = [0] * element_num
 mem_access_count = 0
+target_access_count = 0
 
 with open("./script.log", "r") as script:
     while True:
@@ -35,10 +36,12 @@ with open("./script.log", "r") as script:
         if script_pid == pid and (data_addr < target_addr_end and data_addr >= target_addr):
             data_index = int((data_addr - target_addr) / 8)
             result[data_index] += 1
+            target_access_count += 1
         else:
             continue
 
 for data_index in range(len(result)):
     writer.writerow([data_index, result[data_index]])
 
-print("mem access_count", mem_access_count)
+print("mem access count", mem_access_count)
+print("target access count", target_access_count)
