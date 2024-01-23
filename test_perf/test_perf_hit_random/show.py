@@ -1,13 +1,25 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
+import os
 
-df = pd.read_csv("./result.csv")
+all_file = os.listdir("./")
+#print(all_data)
 
-print(df)
-print("count sum", df["count"].sum())
+for file in all_file:
+    if "result" not in file or ".csv" not in file:
+        continue
+    
+    print(file)
+    df = pd.read_csv(file)
 
-plt.figure()
-sns.histplot(x=df["data_index"], weights=df["count"], bins=100)
+    print(df)
+    print("count sum", df["count"].sum())
 
-plt.show()
+    plt.figure()
+    sns.histplot(x=df["data_index"], weights=df["count"], bins=100)
+
+    plt.show()
+        
+
+
