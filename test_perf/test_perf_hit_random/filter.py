@@ -1,10 +1,28 @@
 import csv
 import re
 
-target_addr = int(input("input address : "), 16)
-target_addr_end = int(input("input address end : "), 16)
-pid = int(input("input pid : "), 10)
-element_num = int(input("input element num : "), 10)
+with open("./temp.log", 'r') as f:
+    data = f.readline()
+    number = re.findall(r'0x[0-9a-fA-F]+|\d+', data)
+    target_addr = int(number[0], 16)
+    print("target addr :", target_addr)
+
+    data = f.readline()
+    number = re.findall(r'0x[0-9a-fA-F]+|\d+', data)
+    target_addr_end = int(number[0], 16)
+    print("target addr end :", target_addr_end)
+
+    data = f.readline()
+    number = re.findall(r'0x[0-9a-fA-F]+|\d+', data)
+    pid = int(number[0], 10)
+    print("pid :", pid)
+
+    data = f.readline()
+    number = re.findall(r'0x[0-9a-fA-F]+|\d+', data)
+    element_num = int(number[0], 10)
+    print("element num :", element_num)
+
+
 f = open("./result.csv", 'w')
 writer = csv.writer(f)
 writer.writerow(["data_index", "count"])
