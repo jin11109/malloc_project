@@ -19,7 +19,7 @@ int target_num = (16 MEGA);
 long long int target[(16 MEGA)];
 
 int main(){
-    srand48(1);
+    srand48(time(NULL));
 
     printf("target start : %p\n", target);
     printf("target end : %p\n", target + target_num);
