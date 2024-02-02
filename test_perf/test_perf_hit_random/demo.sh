@@ -13,7 +13,8 @@ gcc -O3 -g ./test_perf_hit_random.c -o ./test_perf_hit_random
 for (( i=0; i<5; i=i+1 )); do
     echo 150000 | sudo tee /proc/sys/kernel/perf_event_max_sample_rate > /dev/null
 
-    perf record -e ibs_op//pp -F max --running-time --data ./test_perf_hit_random > ./temp.log
+    #perf record -e ibs_op//pp -F max --running-time --data ./test_perf_hit_random > ./temp.log
+    perf record -e ibs_op/cnt_ctl=0/pp,cycles:pp --count=40000 --running-time --data ./test_perf_hit_random > ./temp.log    
     perf script -F +addr,+time,+data_src --ns -i ./perf.data > ./script.log
 
     python3 ./filter.py
@@ -21,6 +22,7 @@ for (( i=0; i<5; i=i+1 )); do
 
     cp ./result.csv ./result${i}.csv
     cp ./script.log ./script${i}.log
+    cp ./perf.data ./perf${i}.data
 done
 
 

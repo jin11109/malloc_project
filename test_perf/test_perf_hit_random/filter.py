@@ -30,6 +30,7 @@ writer.writerow(["data_index", "count"])
 result = [0] * element_num
 mem_access_count = 0
 target_access_count = 0
+target_hit_event_count = {}
 
 with open("./script.log", "r") as script:
     while True:
@@ -51,10 +52,15 @@ with open("./script.log", "r") as script:
         if data_addr != 0:
             mem_access_count += 1
 
-        if script_pid == pid and (data_addr < target_addr_end and data_addr >= target_addr):
+        if script_pid == pid and (data_addr <= target_addr_end and data_addr >= target_addr):
             data_index = int((data_addr - target_addr) / 8)
             result[data_index] += 1
             target_access_count += 1
+
+            if target_hit_event_count.get(info[index + 3]) is None:
+                target_hit_event_count[info[index + 3]] = 0
+            target_hit_event_count[info[index + 3]] += 1
+
         else:
             continue
 
@@ -63,3 +69,4 @@ for data_index in range(len(result)):
 
 print("mem access count", mem_access_count)
 print("target access count", target_access_count)
+print(target_hit_event_count)
