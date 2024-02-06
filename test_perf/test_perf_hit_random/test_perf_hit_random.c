@@ -22,7 +22,7 @@ int main(){
     srand48(time(NULL));
 
     printf("target start : %p\n", target);
-    printf("target end : %p\n", target[target_num - 1]);
+    printf("target end : %p\n", &target[target_num - 1]);
     printf("pid : %d\n", getpid());
     printf("element num : %d\n", target_num);
     printf("size : %ld\n", sizeof(target));
