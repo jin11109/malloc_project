@@ -10,11 +10,11 @@ echo 0 | sudo tee /proc/sys/kernel/randomize_va_space > /dev/null
 gcc -O3 -g ./test_perf_hit_random.c -o ./test_perf_hit_random
 
 #perf stat -e instructions ./test_perf_hit_random
-for (( i=0; i<5; i=i+1 )); do
+for (( i=0; i<1; i=i+1 )); do
     echo 150000 | sudo tee /proc/sys/kernel/perf_event_max_sample_rate > /dev/null
 
     #perf record -e mem-stores:ppp,mem-loads:ppp -F max --running-time --data ./test_perf_hit_random > ./temp.log
-    perf record -e MEM_UOPS_RETIRED.ALL_STORES:ppp,MEM_UOPS_RETIRED.ALL_LOADS:ppp --count=6000 --running-time --data ./test_perf_hit_random > ./temp.log
+    perf record -e MEM_UOPS_RETIRED.ALL_STORES:ppp,MEM_UOPS_RETIRED.ALL_LOADS:ppp --count=200000 --running-time --data ./test_perf_hit_random > ./temp.log
     perf script -F +addr,+time,+data_src --ns -i ./perf.data > ./script.log
     
     python3 ./filter.py
