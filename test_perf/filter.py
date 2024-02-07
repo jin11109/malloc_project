@@ -1,5 +1,6 @@
 import csv
 import re
+import math
 
 bin_addr = []
 
@@ -23,7 +24,7 @@ with open("./temp.log", 'r') as f:
 
 f = open("./result.csv", 'w')
 writer = csv.writer(f)
-writer.writerow(["bin", "count", "current_total_hit", "porpotion", "time"])
+writer.writerow(["bin", "count", "current_total_hit", "count_log2_porpotion", "time"])
 
 start_time = -1
 last_record_time = 0
@@ -54,7 +55,15 @@ with open("./script.log", "r") as script:
         if script_time - last_record_time >= 1:
             if current_total_hit != 0:
                 for i in range(0, 4):
-                    writer.writerow([i, count[i], current_total_hit, count[i] / current_total_hit, script_time])
+                    if count[i] != 0:
+                        log2_porpotion = math.log2(count[i])
+                    else:
+                        log2_porpotion = 0
+                    writer.writerow([i, count[i], current_total_hit, log2_porpotion / math.log2(current_total_hit), script_time - start_time])
+            else:
+                for i in range(0, 4):
+                    writer.writerow([i, 0, 0, 0, script_time - start_time])
+
             last_record_time = script_time
         
         for i in range(0, 4):
