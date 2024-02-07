@@ -54,12 +54,14 @@ with open("./script.log", "r") as script:
 
         if script_time - last_record_time >= 1:
             if current_total_hit != 0:
+                log2_porpotion = []
                 for i in range(0, 4):
                     if count[i] != 0:
-                        log2_porpotion = math.log2(count[i])
+                        log2_porpotion.append(math.log2(count[i]))
                     else:
-                        log2_porpotion = 0
-                    writer.writerow([i, count[i], current_total_hit, log2_porpotion / math.log2(current_total_hit), script_time - start_time])
+                        log2_porpotion.append(0)
+                for i in range(0, 4):
+                    writer.writerow([i, count[i], current_total_hit, log2_porpotion[i] / sum(log2_porpotion), script_time - start_time])
             else:
                 for i in range(0, 4):
                     writer.writerow([i, 0, 0, 0, script_time - start_time])
