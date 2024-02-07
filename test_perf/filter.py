@@ -52,8 +52,9 @@ with open("./script.log", "r") as script:
             last_record_time = script_time
 
         if script_time - last_record_time >= 1:
-            for i in range(0, 4):
-                writer.writerow([i, count[i], current_total_hit, count[i] / current_total_hit, script_time])
+            if current_total_hit != 0:
+                for i in range(0, 4):
+                    writer.writerow([i, count[i], current_total_hit, count[i] / current_total_hit, script_time])
             last_record_time = script_time
         
         for i in range(0, 4):
