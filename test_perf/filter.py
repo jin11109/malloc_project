@@ -7,7 +7,7 @@ with open("./temp.log", 'r') as f:
     for i in range(0, 4):
         data = f.readline()
         number = re.findall(r'0x[0-9a-fA-F]+|\d+', data)
-        bin_addr.append((int(number[0], 16), int(number[1], 16)))
+        bin_addr.append((int(number[1], 16), int(number[0], 16)))
         print(f"bin{i} addr :", bin_addr[-1])
 
     data = f.readline()
@@ -53,7 +53,7 @@ with open("./script.log", "r") as script:
 
         if script_time - last_record_time >= 1:
             for i in range(0, 4):
-                writer.writerow([i, count[i], current_total_hit, count / current_total_hit, script_time])
+                writer.writerow([i, count[i], current_total_hit, count[i] / current_total_hit, script_time])
             last_record_time = script_time
         
         for i in range(0, 4):
