@@ -7,7 +7,7 @@ with open("./temp.log", 'r') as f:
     for i in range(0, 4):
         data = f.readline()
         number = re.findall(r'0x[0-9a-fA-F]+|\d+', data)
-        bin_addr.append((int(number[1], 16), int(number[0], 16)))
+        bin_addr.append((int(number[1], 16), int(number[2], 16)))
         print(f"bin{i} addr :", bin_addr[-1])
 
     data = f.readline()
