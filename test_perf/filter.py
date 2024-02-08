@@ -24,7 +24,15 @@ with open("./temp.log", 'r') as f:
 
 f = open("./result.csv", 'w')
 writer = csv.writer(f)
-writer.writerow(["bin", "count", "current_total_hit", "porpotion", "time"])
+writer.writerow(["bin", "count", "current_total_hit", "porpotion", "theoretic_porpotion", "time"])
+denominator = (1 << 15) + (1 << 10) + (1 << 5) + (1 << 0)
+theoretic_porpotion = [
+    (1 << 15) / denominator,
+    (1 << 10) / denominator,
+    (1 << 5) / denominator,
+    (1 << 0) / denominator
+]
+
 
 start_time = -1
 last_record_time = 0
@@ -55,10 +63,10 @@ with open("./script.log", "r") as script:
         if script_time - last_record_time >= 1:
             if current_total_hit != 0:
                 for i in range(0, 4):
-                    writer.writerow([i, count[i], current_total_hit, count[i] / current_total_hit, script_time - start_time])
+                    writer.writerow([i, count[i], current_total_hit, count[i] / current_total_hit, theoretic_porpotion[i], script_time - start_time])
             else:
                 for i in range(0, 4):
-                    writer.writerow([i, 0, 0, 0, script_time - start_time])
+                    writer.writerow([i, 0, 0, 0, theoretic_porpotion[i], script_time - start_time])
 
             last_record_time = script_time
         

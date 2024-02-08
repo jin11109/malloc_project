@@ -12,11 +12,14 @@ for file in all_file:
     
     print(file)
     df = pd.read_csv(file)
-
     print(df)
 
-    plt.figure()
-    sns.lineplot(data=df, x="time", y="count_log2_porpotion", hue="bin")
+    fig = plt.figure()    
+    for i in range(0, 4):
+        plt.plot(df[df["bin"] == i]["time"], df[df["bin"] == i]["theoretic_porpotion"], color='gray', alpha=0.5, linestyle='dashed', linewidth=2)
+    
+    sns.lineplot(data=df, x="time", y="porpotion", hue="bin", palette = sns.color_palette("mako_r", 6))    
+    plt.yscale('log')
 
     plt.show()
         
