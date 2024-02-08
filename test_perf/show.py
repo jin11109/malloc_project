@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import os
 import numpy as np
+import re
 
 all_file = os.listdir("./")
 
@@ -21,6 +22,9 @@ for file in all_file:
     sns.lineplot(data=df, x="time", y="porpotion", hue="bin", palette = sns.color_palette("mako_r", 6))    
     plt.yscale('log')
 
+    filenumber = re.findall(r'\d+', file)
+    if filenumber != []:
+        plt.savefig(f"{filenumber[0]}.png")
     plt.show()
         
 
