@@ -178,5 +178,4 @@ def show_diagram():
         #task_thread.join()
 
 if __name__ == "__main__":
-    plt.gcf().set_size_inches(18, 12)
     show_diagram()
