@@ -41,6 +41,13 @@ else
     mkdir ./result
 fi
 
+if [ ! -e "./result_picture" ]; then
+    mkdir "./result_picture"
+else
+    rm -r ./result_picture
+    mkdir ./result_picture
+fi
+
 # create the shell with preload 
 echo "#!/bin/bash" > ./program.sh
 echo "export LD_PRELOAD=\$LD_PRELOAD:/lib/mymalloc.so" >> ./program.sh

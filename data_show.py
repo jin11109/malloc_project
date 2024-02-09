@@ -103,7 +103,7 @@ def show_diagram():
             fig = plt.figure(figsize=picture_size, dpi=dpi)
             plt.title('sample not hit pid=' + str(pid))
             sns.barplot(data=indicate, x="total_size", y="caller_addr_str")
-            plt.savefig("sample_not_hit_pid=" + str(pid) + ".png")
+            plt.savefig("./result_picture/sample_not_hit_pid=" + str(pid) + ".png")
 
         if fileresult_names.get(pid) is not None:       
             df = pd.read_csv(fileresult_names[pid], dtype=dtype)
@@ -134,20 +134,20 @@ def show_diagram():
             plt.title('hit relative time(%) (discard interval small than 1s) pid=' + str(pid))
             df_rel = df[mask & mask2]
             sns.histplot(x=df_rel["hit_relative_time"], y=df_rel["caller_addr_str"], legend=True, cbar=True, bins=100) 
-            plt.savefig('relative_time' + str(pid) + ".png")
+            plt.savefig('./result_picture/relative_time' + str(pid) + ".png")
 
             # hit absolute time histplot diagram
             plt.figure(figsize=picture_size, dpi=dpi)
             plt.title('hit absolute time(seconds) pid=' + str(pid))
             df_abs = df[mask2]
             sns.histplot(x=df_abs["hit_absolute_time"], y=df_abs["caller_addr_str"], legend=True, cbar=True, bins=100)
-            plt.savefig('absolute_time' + str(pid) + ".png")
+            plt.savefig('./result_picture/absolute_time' + str(pid) + ".png")
 
             # free absolute time histplot diagram
             plt.figure(figsize=picture_size, dpi=dpi)
             plt.title('free absolute time(seconds) pid=' + str(pid))
             sns.histplot(x=df_abs["interval_time"], y=df_abs["caller_addr_str"], legend=True, cbar=True, bins=100)
-            plt.savefig('free_absolute_time' + str(pid) + ".png")
+            plt.savefig('./result_picture/free_absolute_time' + str(pid) + ".png")
 
 
             # information bar diagram
@@ -160,7 +160,7 @@ def show_diagram():
             )
             g.map(sns.barplot, color="#00E3E3")
             g.set(title="info")
-            plt.savefig("info" + str(pid) + ".png", bbox_inches='tight')
+            plt.savefig("./result_picture/info" + str(pid) + ".png", bbox_inches='tight')
 
         """
         global thread_flag
