@@ -133,20 +133,20 @@ def show_diagram():
             plt.title('hit relative time(%) (discard interval small than 1s) pid=' + str(pid))
             df_rel = df[mask & mask2]
             sns.histplot(x=df_rel["hit_relative_time"], y=df_rel["caller_addr_str"], legend=True, cbar=True, bins=100) 
-            plt.savefig('hit_relative_time(%)_(discard_interval_small_than_1s)pid=' + str(pid) + ".png")
+            plt.savefig('relative_time' + str(pid) + ".png")
 
             # hit absolute time histplot diagram
             plt.figure()
             plt.title('hit absolute time(seconds) pid=' + str(pid))
             df_abs = df[mask2]
             sns.histplot(x=df_abs["hit_absolute_time"], y=df_abs["caller_addr_str"], legend=True, cbar=True, bins=100)
-            plt.savefig('hit_absolute_time(seconds)_pid=' + str(pid) + ".png")
+            plt.savefig('absolute_time' + str(pid) + ".png")
 
             # free absolute time histplot diagram
             plt.figure()
             plt.title('free absolute time(seconds) pid=' + str(pid))
             sns.histplot(x=df_abs["interval_time"], y=df_abs["caller_addr_str"], legend=True, cbar=True, bins=100)
-            plt.savefig('free_absolute_time(seconds)pid=' + str(pid) + ".png")
+            plt.savefig('free_absolute_time' + str(pid) + ".png")
 
 
             # information bar diagram
@@ -157,6 +157,7 @@ def show_diagram():
             )
             g.map(sns.barplot, color="#00E3E3")
             g.set(title="info")
+            plt.savefig("info" + str(pid) + ".png")
 
         """
         global thread_flag
@@ -171,6 +172,7 @@ def show_diagram():
         else:
             input("press enter to skip")
         plt.close("all")
+        
         #plt.ioff()
         #thread_flag = False
         #task_thread.join()
