@@ -13,6 +13,8 @@ import threading
 import bisect
 
 thread_flag = True
+picture_size = (10, 8)
+dpi = 100
 
 def query(df_rel, df_abs, indicate):
     global thread_flag
@@ -28,7 +30,7 @@ def query(df_rel, df_abs, indicate):
         #try:
         if True:
             if dftype == "abs":
-                fig = plt.figure()
+                fig = plt.figure(figsize=picture_size, dpi=dpi)
                 plt.title(dftype + "_" + caller_addr_str)
                 mask = all_df[dftype]["caller_addr_str"] == caller_addr_str
                 df_temp = all_df[dftype][mask]
@@ -41,7 +43,7 @@ def query(df_rel, df_abs, indicate):
                 fig.show()
 
             elif dftype == "rel":
-                fig = plt.figure()
+                fig = plt.figure(figsize=picture_size, dpi=dpi)
                 plt.title(dftype + "_" + caller_addr_str + " (discard interval small than 1s)")
                 mask = all_df[dftype]["caller_addr_str"] == caller_addr_str
                 df_temp = all_df[dftype][mask]
@@ -96,13 +98,12 @@ def show_diagram():
             indicate = df_not.head(50)
             
             print("\n")
-            print(str(pid) + " not be sample : ", len(df_not))
+            print(str(pid) + " not be sampled : ", len(df_not))
 
-            fig = plt.figure()
-            plt.savefig("sample_not_hit_pid=" + str(pid) + ".png")
+            fig = plt.figure(figsize=picture_size, dpi=dpi)
             plt.title('sample not hit pid=' + str(pid))
             sns.barplot(data=indicate, x="total_size", y="caller_addr_str")
-
+            plt.savefig("sample_not_hit_pid=" + str(pid) + ".png")
 
         if fileresult_names.get(pid) is not None:       
             df = pd.read_csv(fileresult_names[pid], dtype=dtype)
@@ -129,21 +130,21 @@ def show_diagram():
             mask2 = df["caller_addr_str"].isin(indicate["caller_addr_str"])
 
             # hit relative time histplot diagram
-            plt.figure()
+            plt.figure(figsize=picture_size, dpi=dpi)
             plt.title('hit relative time(%) (discard interval small than 1s) pid=' + str(pid))
             df_rel = df[mask & mask2]
             sns.histplot(x=df_rel["hit_relative_time"], y=df_rel["caller_addr_str"], legend=True, cbar=True, bins=100) 
             plt.savefig('relative_time' + str(pid) + ".png")
 
             # hit absolute time histplot diagram
-            plt.figure()
+            plt.figure(figsize=picture_size, dpi=dpi)
             plt.title('hit absolute time(seconds) pid=' + str(pid))
             df_abs = df[mask2]
             sns.histplot(x=df_abs["hit_absolute_time"], y=df_abs["caller_addr_str"], legend=True, cbar=True, bins=100)
             plt.savefig('absolute_time' + str(pid) + ".png")
 
             # free absolute time histplot diagram
-            plt.figure()
+            plt.figure(figsize=picture_size, dpi=dpi)
             plt.title('free absolute time(seconds) pid=' + str(pid))
             sns.histplot(x=df_abs["interval_time"], y=df_abs["caller_addr_str"], legend=True, cbar=True, bins=100)
             plt.savefig('free_absolute_time' + str(pid) + ".png")
@@ -153,11 +154,13 @@ def show_diagram():
             g = sns.PairGrid(
                 data=indicate,
                 x_vars=["sizecount", "sizesum"],
-                y_vars=["caller_addr_str"]
+                y_vars=["caller_addr_str"],
+                height=picture_size[0] / 1.5,
+                aspect=1
             )
             g.map(sns.barplot, color="#00E3E3")
             g.set(title="info")
-            plt.savefig("info" + str(pid) + ".png")
+            plt.savefig("info" + str(pid) + ".png", bbox_inches='tight')
 
         """
         global thread_flag
