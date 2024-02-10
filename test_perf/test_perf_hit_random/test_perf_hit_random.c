@@ -17,6 +17,7 @@
 
 int target_num = (16 MEGA);
 long long int target[(16 MEGA)];
+long long int pattern[(16 MEGA)];
 
 int main(){
     srand48(time(NULL));
@@ -32,7 +33,8 @@ int main(){
     int temp = 0;
     for (long long int i = 0; i < n; i++) {    
         int index = lrand48() % target_num;
-        temp += atomic_load_explicit(&target[index], memory_order_relaxed);;
+        temp += atomic_load_explicit(&pattern[index], memory_order_relaxed) + atomic_load_explicit(&target[index], memory_order_relaxed);
+        //temp += atomic_load_explicit(&target[index], memory_order_relaxed) + atomic_load_explicit(&pattern[index], memory_order_relaxed);
     }
     printf("temp : %d\n", temp);
 
