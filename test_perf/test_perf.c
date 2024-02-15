@@ -27,19 +27,19 @@ int main(){
     long long int n = (long long int)1 << 32;
     int temp = 0;
     for (long long int i = 0; i < n; i++) {
-        if (i % freq0 == 0){
+        if (i << 63 == 0){
             int index = lrand48() % element_num;
             temp += atomic_load_explicit(&bin0[index], memory_order_relaxed);
         }
-        if (i % freq1 == 0){
+        if (i << 58 == 0){
             int index = lrand48() % element_num;
             temp += atomic_load_explicit(&bin1[index], memory_order_relaxed);
         }
-        if (i % freq2 == 0){
+        if (i << 53 == 0){
             int index = lrand48() % element_num;
             temp += atomic_load_explicit(&bin2[index], memory_order_relaxed);
         }
-        if (i % freq3 == 0){
+        if (i << 48 == 0){
             int index = lrand48() % element_num;
             temp += atomic_load_explicit(&bin3[index], memory_order_relaxed);
         }
