@@ -30,7 +30,7 @@ if [ ! -e "./data" ]; then
     mkdir "./data"
 else
     rm -r ./data
-    mkdir ./data
+    mkdir "./data"
 fi
 
 # this "result" folder include data from "data_merge.py" for "data_show.py" 
@@ -62,7 +62,7 @@ fi
 
 # start 
 python3 ./data_record.py &
-perf record -e MEM_UOPS_RETIRED.ALL_STORES:ppp,MEM_UOPS_RETIRED.ALL_LOADS:ppp --count=50000 --running-time --data -o ./myperf.data ./program.sh
+perf record -e MEM_UOPS_RETIRED.ALL_STORES:ppp,MEM_UOPS_RETIRED.ALL_LOADS:ppp --count=20000 --running-time --data -o ./myperf.data ./program.sh
 perf script -F +addr,+time,+data_src -i ./myperf.data >> ./fifo
 
 # wait for ./data_capturer.py

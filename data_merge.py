@@ -110,7 +110,9 @@ def deal_with_files():
         "pool_begin" : "int64",
         "hit_addr" : "int64",
         "hit_time" : "float64",
-        "data_addr_end" : "int64"
+        "data_addr_end" : "int64",
+        "caller_objects_num" : "int32",
+        "caller_total_alloc_size" : "int64"
     }
 
     # open and initialize malloc obj files
@@ -124,26 +126,31 @@ def deal_with_files():
             df_mya = vaex.from_csv(file_names[pid]["mya"], dtype=df_datatype)
             df_myf = vaex.from_csv(file_names[pid]["myf"], dtype=df_datatype)
 
+            # inner join alloc and free
             df_mya = df_mya.join(df_myf, on="data_addr", how="left", allow_duplication=True)    
             df_mya["free_time"] = df_mya["free_time"].fillna(end_time)    
-        
+
+            # count malloc object and sum
+            caller_objects_info = df_mya.groupby('caller_addr').agg({"caller_objects_num": 'count', "caller_total_alloc_size": vaex.agg.sum('size')})
+            # inner join malloc object
+            df_mya = df_mya.join(caller_objects_info, on="caller_addr", how="left", allow_duplication=False) 
+
+            # add some info
             df_mya["data_addr_end"] = df_mya["data_addr"] + df_mya["size"]
-        
-            print("export merage free and malloc " + str(pid))
+
+            print("export merge free and malloc " + str(pid))
             df_mya.export("./data/myaf_" + str(pid) + ".csv", progress=True)
-            del df_mya, df_myf
+        
+            del df_mya, df_myf, caller_objects_info
             gc.collect()
 
             file_names[pid]["myaf"] = "./data/myaf_" + str(pid) + ".csv"
             #df[pid]["myaf"] = vaex.from_csv("./data/myaf_" + str(pid) + ".csv", dtype=df_datatype)
 
     # open and initialize sript files
-    #for pid in filescript_names:
-    #    df_script[pid] = vaex.from_csv(filescript_names[pid], dtype=df_datatype)
-
     filescript_newnames = {}
     for pid in file_names:
-        # script didn't record
+        # script didn't math myaf (malloc files)
         if filescript_names.get(pid) is None:
             continue
         if file_names[pid].get("myaf") is None or file_names[pid].get("myi") is None:
@@ -314,7 +321,7 @@ def deal_with_files():
         
     for pid in filescript_newnames:
         df_script = vaex.from_csv(filescript_newnames[pid], dtype=df_datatype)
-        print(df_script)
+        #print(df_script)
         df_script["interval_time"] = df_script["free_time"] - df_script["alloc_time"]
         df_script.export(filescript_newnames[pid])
         del df_script
@@ -360,7 +367,7 @@ def deal_with_files():
             df_script["hit_relative_time"] = (df_script["hit_time"] - df_script["alloc_time"]) / df_script["interval_time"] * 100
             df_script["caller_addr_str"] = df_script["caller_addr"].apply(to_hex)
 
-            export_columns = ["caller_addr", "caller_addr_str", "data_addr", "alloc_time", "free_time", "hit_time", "interval_time", "hit_relative_time", "size"]
+            export_columns = ["caller_addr", "caller_addr_str", "data_addr", "alloc_time", "free_time", "hit_time", "interval_time", "hit_relative_time", "size", "caller_objects_num", "caller_total_alloc_size"]
             df_script = df_script[export_columns]
             print("export hit information result")
             df_script.export("./result/result" +  "_" + str(pid) + ".csv", progress=True)
@@ -370,16 +377,16 @@ def deal_with_files():
             del df_script
             gc.collect()
 
-        if file_names.get(pid) is not None and file_names[pid].get("myaf"):
         # export malloc caller address not be sampled
+        if file_names.get(pid) is not None and file_names[pid].get("myaf"):
             df_myaf = vaex.from_csv(file_names[pid]["myaf"], dtype=df_datatype)
 
-            df_myaf = df_myaf.groupby('caller_addr', agg={'total_size': vaex.agg.sum('size')})
+            df_myaf = df_myaf.groupby('caller_addr', agg={'caller_total_alloc_size': vaex.agg.mean('caller_total_alloc_size')})
             mask = ~df_myaf["caller_addr"].isin(hit_caller_addrs)
             df_myaf = df_myaf[mask]
             df_myaf["caller_addr_str"] = df_myaf["caller_addr"].apply(to_hex)
 
-            export_columns = ["caller_addr", "caller_addr_str", "total_size"]
+            export_columns = ["caller_addr", "caller_addr_str", "caller_total_alloc_size"]
             df_myaf = df_myaf[export_columns]
             print("export malloc caller address not be sampled")
             df_myaf.export("./result/result_not_be_sampled" +  "_" + str(pid) + ".csv", progress=True)

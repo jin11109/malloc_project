@@ -60,7 +60,7 @@ fi
 
 # start 
 python3 ./data_record.py &
-perf record -e ibs_op/cnt_ctl=1/pp --count=40000 --running-time --data -o ./myperf.data ./program.sh
+perf record -e ibs_op/cnt_ctl=1/pp --count=50000 --running-time --data -o ./myperf.data ./program.sh
 perf script -F +addr,+time,+data_src --ns -i ./myperf.data >> ./fifo
 
 # wait for ./data_capturer.py
