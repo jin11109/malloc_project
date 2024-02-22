@@ -150,7 +150,7 @@ def show_diagram():
                 os.makedirs(dir_path)
             
             # make pictures with all caller 
-            for i in range(min(10, number_of_sampled_malloc)):
+            for i in range(number_of_sampled_malloc):
                 per_caller_info = indicate.iloc[i:i + 1, :]
                 print(per_caller_info)
                 mask2 = df["caller_addr_str"].isin(per_caller_info["caller_addr_str"])
