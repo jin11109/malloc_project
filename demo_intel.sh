@@ -13,7 +13,7 @@ echo 150000 | sudo tee /proc/sys/kernel/perf_event_max_sample_rate > /dev/null
 # 39750
 
 # compile preload program
-gcc -shared -fPIC -O0 -pthread ./mymalloc.c -o ./mymalloc.so
+gcc -shared -fPIC -O3 -pthread ./mymalloc.c -o ./mymalloc.so
 # it will occur some bugs if it doesn't move to lib 
 sudo cp ./mymalloc.so /lib/
 

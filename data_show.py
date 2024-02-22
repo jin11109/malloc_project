@@ -64,6 +64,7 @@ def query(df_rel, df_abs, indicate):
 def show_diagram():
     fileresult_names = {}
     fileresult_notsampled_names = {}
+    fileresult_myaf = {}
     pids = {}
     all_data = os.listdir("./result")
     #print(all_data)
@@ -72,6 +73,8 @@ def show_diagram():
         pids[pid] = True
         if "result_not_be_sampled" in data:
             fileresult_notsampled_names[pid] = "./result/" + data
+        if "myaf" in data:
+            fileresult_myaf[pid] = "./result/" + data
         else:
             fileresult_names[pid] = "./result/" + data
 
@@ -86,11 +89,15 @@ def show_diagram():
         "hit_relative_time" : float,
         "size" : int,
         "caller_objects_num" : int,
-        "caller_total_alloc_size" : int
+        "caller_total_alloc_size" : int,
+        "data_addr_end" : int,
+        "pool_begin" : int,
+        "generation" : float
     }
     
     for pid in pids:
         flag = False
+        number_of_unsampled_malloc = 0
         if fileresult_notsampled_names.get(pid) is not None:
             df_not = pd.read_csv(fileresult_notsampled_names[pid], dtype=dtype)
             df_not = pd.DataFrame(df_not)
@@ -99,16 +106,20 @@ def show_diagram():
             indicate = df_not.head(50)
             
             print("\n")
-            print(str(pid) + " not be sampled : ", len(df_not))
+            number_of_unsampled_malloc = len(df_not)
+            print(str(pid) + " not be sampled : ", number_of_unsampled_malloc)
 
             fig = plt.figure(figsize=picture_size, dpi=dpi)
             plt.title('sample not hit pid=' + str(pid))
             sns.barplot(data=indicate, x="caller_total_alloc_size", y="caller_addr_str")
             plt.savefig("./result_picture/" + str(pid) + "_sample_not_hit" + ".png")
 
-        if fileresult_names.get(pid) is not None:       
+        if (fileresult_names.get(pid) is not None) and (fileresult_myaf.get(pid) is not None):       
+            # open files
             df = pd.read_csv(fileresult_names[pid], dtype=dtype)
+            df_myaf = pd.read_csv(fileresult_myaf[pid], dtype=dtype)
             df = pd.DataFrame(df)
+            df_myaf = pd.DataFrame(df_myaf)
             flag = True
 
             # drop error
@@ -127,8 +138,11 @@ def show_diagram():
                 "caller_total_alloc_size": ["mean"]
             })
             indicate.columns = indicate.columns.map(''.join)
-            caller_num = len(indicate)
-            print(str(pid) + " sample num : ", caller_num)
+            
+            # record some information
+            number_of_sampled_malloc = len(indicate)
+            all_hits_count = len(df)
+            print(str(pid) + " sample num : ", number_of_sampled_malloc)
 
             # put per caller picture into this dir
             dir_path = "./result_picture/" + str(pid)
@@ -136,46 +150,57 @@ def show_diagram():
                 os.makedirs(dir_path)
             
             # make pictures with all caller 
-            
-            for i in range(caller_num):
+            for i in range(min(10, number_of_sampled_malloc)):
                 per_caller_info = indicate.iloc[i:i + 1, :]
                 print(per_caller_info)
                 mask2 = df["caller_addr_str"].isin(per_caller_info["caller_addr_str"])
+                mask3 = df_myaf["caller_addr"].isin([int(per_caller_info["caller_addr_str"].to_string(index=False), 16)])
 
                 fig, axs = plt.subplots(1, 3, figsize=(14, 5), gridspec_kw={'bottom': 0.3, 'top': 0.9}) # bottom and top is percentage 
+                plt.subplots_adjust(wspace=0.3)
                 # absolute time
                 df_temp = df[mask2]
                 sns.histplot(x=df_temp["hit_absolute_time"], ax=axs[0], bins=100)
-                axs[0].set_title('Absolute Time')
-                axs[0].set_xlabel('time (seconds)')
+                axs[0].set_title('Sampling Hits Count for Malloc Objects')
+                axs[0].set_xlabel('Timing of Sampling Hits Across Generations (seconds)')
+                axs[0].set_ylabel('Number of Sampling Hits')
 
                 # free time
-                df_temp = df[mask2]
-                sns.histplot(x=df_temp["interval_time"], ax=axs[2], bins=100)
-                axs[2].set_title('Free Time')
-                axs[2].set_xlabel('time (seconds)')
+                dfmyaf_temp = df_myaf[mask3]
+                sns.histplot(x=dfmyaf_temp["generation"], ax=axs[2], bins=100)
+                axs[2].set_title('Generation Lengths of Malloc Objects')
+                axs[2].set_xlabel('Generation Lengths (seconds)')
+                axs[2].set_ylabel('Number of Malloc Objects')
 
                 # relatine time
                 df_temp = df[mask & mask2]
                 rel_bins = np.linspace(-3, 103, 101)
                 sns.histplot(x=df_temp["hit_relative_time"], ax=axs[1], bins=rel_bins)
-                axs[1].set_title('Relative Time')
-                axs[1].set_xlabel('time (%)')
+                axs[1].set_title('Sampling Hits Count for Malloc Objects')
+                axs[1].set_xlabel('Timing of Sampling Hits Across Generations (%)')
+                axs[1].set_ylabel('Number of Sampling Hits')
                 #axs[1].set_xlim(-3, 103)
                 
                 # add some information to picture
-                text = "caller addr : " + per_caller_info["caller_addr_str"].to_string(index=False) \
-                    + "\n" + "total hit count : " + per_caller_info["sizecount"].to_string(index=False) \
-                    + "\n" + "total alloc size : " + per_caller_info["caller_total_alloc_sizemean"].to_string(index=False) \
-                    + "\n" + "total alloc objects num : " + per_caller_info["caller_objects_nummean"].to_string(index=False)
-                
-                fig.text(0.5, 0.05,  text, ha='center', va='bottom', fontsize=10)
+                malloc_info = "malloc information" \
+                    + "\n" + "|  malloc address : " + per_caller_info["caller_addr_str"].to_string(index=False) \
+                    + "\n" + "|  Sampling Hits Count of malloc Objects : " + per_caller_info["sizecount"].to_string(index=False) \
+                    + "\n" + "|  Size of All Allocated Spaces by this malloc: " + per_caller_info["caller_total_alloc_sizemean"].to_string(index=False) \
+                    + "\n" + "|  Number of Objects Allocated by this malloc : " + per_caller_info["caller_objects_nummean"].to_string(index=False)
+                other_info = "Information about this experiment" \
+                    + "\n" + "|  All Sampling Hits Count of malloc Objects for PID " + str(pid) + " : " + str(all_hits_count) \
+                    + "\n" + "|  Count of Unsampled mallocs for PID " + str(pid) + " : " + str(number_of_unsampled_malloc)\
+                    + "\n" + "|  Count of sampled mallocs for PID " + str(pid) + " : " + str(number_of_sampled_malloc)\
+
+                fig.text(0.2, 0.2,  malloc_info, ha='left', va='top', fontsize=10, color='blue')
+                fig.text(0.6, 0.2, other_info, ha='left', va='top', fontsize=10, color='blue')
 
                 # save picture
                 picture_name = re.sub(r'\s+', '_', per_caller_info["caller_addr_str"].to_string())
                 plt.savefig(dir_path + "/" + picture_name)
                 plt.close(fig)
-                
+
+        """        
             # choose witch to display
             #indicate = indicate.sort_values("sizesize", ascending=False)
             #indicate = indicate.sort_values("sizecount", ascending=False)
@@ -227,6 +252,7 @@ def show_diagram():
         else:
             input("press enter to skip")
         plt.close("all")
-     
+
+        """
 if __name__ == "__main__":
     show_diagram()

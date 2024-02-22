@@ -12,7 +12,7 @@ echo 0 | sudo tee /proc/sys/kernel/randomize_va_space > /dev/null
 echo 150000 | sudo tee /proc/sys/kernel/perf_event_max_sample_rate > /dev/null
 
 # compile preload program
-gcc -shared -fPIC -O0 -pthread ./mymalloc.c -o ./mymalloc.so
+gcc -shared -fPIC -O3 -pthread ./mymalloc.c -o ./mymalloc.so
 sudo cp ./mymalloc.so /lib/
 
 # create fifo
@@ -63,7 +63,7 @@ python3 ./data_record.py &
 perf record -e ibs_op/cnt_ctl=1/pp --count=50000 --running-time --data -o ./myperf.data ./program.sh
 perf script -F +addr,+time,+data_src --ns -i ./myperf.data >> ./fifo
 
-# wait for ./data_capturer.py
+# wait for ./data_record.py
 wait
 
 rm ./fifo
@@ -74,6 +74,7 @@ echo 1 | sudo tee /proc/sys/kernel/kptr_restrict > /dev/null
 echo 2 | sudo tee /proc/sys/kernel/randomize_va_space > /dev/null
 
 python3 ./data_merge.py
+cp ./data/myaf* ./result/
 python3 ./data_show.py
 
 #rm -r ./data

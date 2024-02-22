@@ -112,7 +112,8 @@ def deal_with_files():
         "hit_time" : "float64",
         "data_addr_end" : "int64",
         "caller_objects_num" : "int32",
-        "caller_total_alloc_size" : "int64"
+        "caller_total_alloc_size" : "int64",
+        "generation" : "float64"
     }
 
     # open and initialize malloc obj files
@@ -137,6 +138,7 @@ def deal_with_files():
 
             # add some info
             df_mya["data_addr_end"] = df_mya["data_addr"] + df_mya["size"]
+            df_mya["generation"] = df_mya["free_time"] - df_mya["alloc_time"]
 
             print("export merge free and malloc " + str(pid))
             df_mya.export("./data/myaf_" + str(pid) + ".csv", progress=True)
