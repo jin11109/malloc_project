@@ -75,6 +75,7 @@ echo 2 | sudo tee /proc/sys/kernel/randomize_va_space > /dev/null
 
 # merge data recorded from "data_record.py"
 python3 ./data_merge.py
+cp ./data/myaf* ./result/
 # show the result and save picture
 python3 ./data_show.py
 
