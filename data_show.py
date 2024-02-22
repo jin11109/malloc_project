@@ -73,7 +73,7 @@ def show_diagram():
         pids[pid] = True
         if "result_not_be_sampled" in data:
             fileresult_notsampled_names[pid] = "./result/" + data
-        if "myaf" in data:
+        elif "myaf" in data:
             fileresult_myaf[pid] = "./result/" + data
         else:
             fileresult_names[pid] = "./result/" + data
