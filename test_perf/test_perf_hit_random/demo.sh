@@ -9,12 +9,16 @@ echo 0 | sudo tee /proc/sys/kernel/randomize_va_space > /dev/null
 # compile program
 gcc -O3 -g ./test_perf_hit_random.c -o ./test_perf_hit_random
 
+# count 
+count=(100000 50000 30000 20000 10000)
+
 #perf stat -e instructions ./test_perf_hit_random
-for (( i=0; i<5; i=i+1 )); do
+for (( i=0; i<1; i=i+1 )); do
     echo 150000 | sudo tee /proc/sys/kernel/perf_event_max_sample_rate > /dev/null
 
-    #perf record -e ibs_op//pp -F max --running-time --data ./test_perf_hit_random > ./temp.log
-    perf record -e ibs_op/cnt_ctl=0/pp,cycles:pp --count=40000 --running-time --data ./test_perf_hit_random > ./temp.log    
+    #perf record -e ibs_op/cnt_ctl=1/pp -F max --timestamp --data ./test_perf_hit_random > ./temp.log
+    #perf record -e ibs_op/cnt_ctl=1/pp --count=${count[2]} --timestamp --realtime=99 --mmap-pages=65536 --data ./test_perf_hit_random > ./temp.log    
+    perf record -e ibs_op/cnt_ctl=1/pp --count=50000 --timestamp --data ./test_perf_hit_random > ./temp.log
     perf script -F +addr,+time,+data_src --ns -i ./perf.data > ./script.log
 
     python3 ./filter.py
