@@ -21,30 +21,59 @@ VOID RecordMemWrite(VOID* ip, VOID* addr) { fprintf(trace, "%p: W %p\n", ip, add
 VOID InsertNOP() {
     __asm__ __volatile__ (
         "nop\n"
-        "nop\n"
-        "nop\n"
-        "nop\n"
-        "nop\n"
-        "nop\n"
-        "nop\n"
-        "nop\n"
-        "nop\n"
-        "nop\n"
-        "nop\n"
-        "nop\n"
-        "nop\n"
-        "nop\n"
-        "nop\n"
-        "nop\n"
-        "nop\n"
-        "nop\n"
-        "nop\n"
-        "nop\n"
-        "nop\n"
-        "nop\n"
-        "nop\n"
-        "nop\n"
-        "nop\n"
+	"nop\n"
+	"nop\n"
+	"nop\n"
+	"nop\n"
+	"nop\n"
+	"nop\n"
+	"nop\n"
+	"nop\n"
+	"nop\n"
+	"nop\n"
+	"nop\n"
+	"nop\n"
+	"nop\n"
+	"nop\n"
+	"nop\n"
+	"nop\n"
+	"nop\n"
+	"nop\n"
+	"nop\n"
+	"nop\n"
+	"nop\n"
+	"nop\n"
+	"nop\n"
+	"nop\n"
+	"nop\n"
+	"nop\n"
+	"nop\n"
+	"nop\n"
+	"nop\n"
+	"nop\n"
+	"nop\n"
+	"nop\n"
+	"nop\n"
+	"nop\n"
+	"nop\n"
+	"nop\n"
+	"nop\n"
+	"nop\n"
+	"nop\n"
+	"nop\n"
+	"nop\n"
+	"nop\n"
+	"nop\n"
+	"nop\n"
+	"nop\n"
+	"nop\n"
+	"nop\n"
+	"nop\n"
+	"nop\n"
+	"nop\n"
+	"nop\n"
+	"nop\n"
+
     );
 }
 
@@ -56,6 +85,8 @@ VOID Instruction(INS ins, VOID* v)
     //
     // On the IA-32 and Intel(R) 64 architectures conditional moves and REP
     // prefixed instructions appear as predicated instructions in Pin.
+    
+        
     UINT32 memOperands = INS_MemoryOperandCount(ins);
 
     // Iterate over each memory operand of the instruction.
@@ -66,17 +97,31 @@ VOID Instruction(INS ins, VOID* v)
             //INS_InsertPredicatedCall(ins, IPOINT_BEFORE, (AFUNPTR)RecordMemRead, IARG_INST_PTR, IARG_MEMORYOP_EA, memOp,
             //                         IARG_END);
             INS_InsertCall(ins, IPOINT_BEFORE, (AFUNPTR)InsertNOP, IARG_END);
+	    break; 
         }
         // Note that in some architectures a single memory operand can be
         // both read and written (for instance incl (%eax) on IA-32)
         // In that case we instrument it once for read and once for write.
-        if (INS_MemoryOperandIsWritten(ins, memOp))
-        {
+        //if (INS_MemoryOperandIsWritten(ins, memOp))
+        //{
             //INS_InsertPredicatedCall(ins, IPOINT_BEFORE, (AFUNPTR)RecordMemWrite, IARG_INST_PTR, IARG_MEMORYOP_EA, memOp,
             //                         IARG_END);
-            INS_InsertCall(ins, IPOINT_BEFORE, (AFUNPTR)InsertNOP, IARG_END);
-        }
+            //INS_InsertCall(ins, IPOINT_BEFORE, (AFUNPTR)InsertNOP, IARG_END);
+        //}
     }
+    
+
+   /* 
+    if ((INS_IsMemoryRead(ins) || INS_IsMemoryWrite(ins)) && INS_IsValidForIpointAfter(ins)){
+        INS_InsertCall(ins, IPOINT_AFTER, (AFUNPTR)InsertNOP, IARG_END);
+    }
+    */
+     /*	
+    if (INS_IsMemoryRead(ins) || INS_IsMemoryWrite(ins)){
+        INS_InsertCall(ins, IPOINT_BEFORE, (AFUNPTR)InsertNOP, IARG_END);
+    }
+    */
+
 }
 
 VOID Fini(INT32 code, VOID* v)
