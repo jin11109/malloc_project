@@ -11,11 +11,31 @@ import seaborn as sns
 import os
 import threading
 import bisect
+from fastdtw import fastdtw
+from scipy.spatial.distance import euclidean
+
+dtype = {
+    "caller_addr" : int,
+    "data_addr" : int,
+    "caller_addr_str" : str,
+    "interval_time" : float,
+    "hit_time" : float,
+    "alloc_time" : float,
+    "free_time" : float,
+    "hit_relative_time" : float,
+    "size" : int,
+    "caller_objects_num" : int,
+    "caller_total_alloc_size" : int,
+    "data_addr_end" : int,
+    "pool_begin" : int,
+    "generation" : float
+}
 
 thread_flag = True
 picture_size = (10, 8)
 dpi = 100
 
+"""
 def query(df_rel, df_abs, indicate):
     global thread_flag
     all_df = {
@@ -59,7 +79,90 @@ def query(df_rel, df_abs, indicate):
                 continue
         #except:
         #    print("input error")
-                
+"""
+
+
+def DTW(df_per_malloc, save_path):
+    print(df_per_malloc)
+    
+    standard = df_per_malloc["hit_absolute_time"].to_numpy()
+    standard.sort()
+    print(standard)
+    if len(standard) < 200:
+        return
+
+    malloc_objs = df_per_malloc.groupby("data_addr", as_index=False).size()
+    malloc_objs = malloc_objs["data_addr"].to_dict()
+    #malloc_objs.columns = malloc_objs.columns.map(''.join)
+    #print(malloc_objs)
+
+    dtws = []
+    normalized_dtws = []
+    sampled_dtws = []
+    sampled_normalized_dtws = []
+    hit_count = []
+
+    for index in malloc_objs:
+        obj = malloc_objs[index]
+        print(index, obj)
+        mask = df_per_malloc["data_addr"] == obj
+        obj_performance = df_per_malloc[mask]["hit_absolute_time"].to_numpy()
+
+        #obj_performance /= standard[-1]
+        sampled_standard = np.random.choice(standard, size=len(obj_performance), replace=False)
+        #normalized_standard = standard / standard[-1]
+        sampled_normalized_standard = np.random.choice(standard, size=len(obj_performance), replace=False)
+
+        distance1, path1 = fastdtw(standard, obj_performance, dist=euclidean)
+        distance2, path2 = fastdtw(sampled_standard, obj_performance, dist=euclidean)
+
+        normalized_distance1 = distance1 / ((len(obj_performance) + len(standard) / 2))
+        normalized_distance2 = distance2 / ((len(obj_performance) + len(sampled_standard) / 2))
+
+        if len(obj_performance) > 10:
+            fig, axs = plt.subplots(1, 3, figsize=(14, 5), gridspec_kw={'bottom': 0.3, 'top': 0.9})
+            rel_bins = np.linspace(standard[0], standard[-1], 101)
+            sns.histplot(x=standard, ax=axs[0], bins=100)
+            sns.histplot(x=sampled_standard, ax=axs[1], bins=100)
+            sns.histplot(x=obj_performance, ax=axs[2], bins=rel_bins)
+            
+            obj_info = "malloc object information" \
+                        + "\n" + "|  DTW (normalized_standard and normalized obj_performance) : " + str(distance1) \
+                        + "\n" + "|  DTW Normalized Distance : " + str(normalized_distance1) \
+                        + "\n" + "|" \
+                        + "\n" + "|  DTW (sampled_normalized_standard and normalized obj_performance) : " + str(distance2) \
+                        + "\n" + "|  DTW Normalized Distance : " + str(normalized_distance2)
+            fig.text(0.2, 0.2,  obj_info, ha='left', va='top', fontsize=10, color='blue')
+            fig.savefig(save_path + "_dtw" + str(index))
+            plt.close(fig)
+        
+        dtws.append(distance1)
+        normalized_dtws.append(normalized_distance1)
+        sampled_dtws.append(distance2)
+        sampled_normalized_dtws.append(normalized_distance2)
+        hit_count.append(len(obj_performance))
+        
+
+    fig, axs = plt.subplots(2, 2, figsize=(14, 14), gridspec_kw={'bottom': 0.2, 'top': 0.9})
+    #
+    #sns.scatterplot(x=hit_count, y=normalized_dtws, ax=axs[1])
+    sns.histplot(x=hit_count, y=dtws, ax=axs[0][0], cbar=True)
+    #sns.scatterplot(x=hit_count, y=dtws, ax=axs[0][0])
+    sns.histplot(x=hit_count, y=normalized_dtws, ax=axs[0][1], cbar=True)
+    #sns.scatterplot(x=hit_count, y=normalized_dtws, ax=axs[0][1])
+    sns.histplot(x=hit_count, y=sampled_dtws, ax=axs[1][0], cbar=True)
+    sns.histplot(x=hit_count, y=sampled_normalized_dtws, ax=axs[1][1], cbar=True)
+
+    fig.savefig(save_path + "_all_dtws")
+    plt.close(fig)
+
+
+    #distance, path = fastdtw(sequence1, sequence2, dist=euclidean)
+
+    #print("DTW :", distance)
+    #print("path :", path)
+    print("\n\n\n")
+
 
 def show_diagram():
     fileresult_names = {}
@@ -78,22 +181,6 @@ def show_diagram():
         else:
             fileresult_names[pid] = "./result/" + data
 
-    dtype = {
-        "caller_addr" : int,
-        "data_addr" : int,
-        "caller_addr_str" : str,
-        "interval_time" : float,
-        "hit_time" : float,
-        "alloc_time" : float,
-        "free_time" : float,
-        "hit_relative_time" : float,
-        "size" : int,
-        "caller_objects_num" : int,
-        "caller_total_alloc_size" : int,
-        "data_addr_end" : int,
-        "pool_begin" : int,
-        "generation" : float
-    }
     
     for pid in pids:
         flag = False
@@ -149,13 +236,15 @@ def show_diagram():
             if not Path(dir_path).exists():
                 os.makedirs(dir_path)
             
-            # make pictures with all caller 
+            # make pictures with every malloc address 
             for i in range(number_of_sampled_malloc):
                 per_caller_info = indicate.iloc[i:i + 1, :]
                 print(per_caller_info)
+                
                 mask2 = df["caller_addr_str"].isin(per_caller_info["caller_addr_str"])
                 mask3 = df_myaf["caller_addr"].isin([int(per_caller_info["caller_addr_str"].to_string(index=False), 16)])
-
+                
+                """
                 fig, axs = plt.subplots(1, 3, figsize=(14, 5), gridspec_kw={'bottom': 0.3, 'top': 0.9}) # bottom and top is percentage 
                 plt.subplots_adjust(wspace=0.3)
                 # absolute time
@@ -165,7 +254,7 @@ def show_diagram():
                 axs[0].set_xlabel('Timing of Sampling Hits Across Generations (seconds)')
                 axs[0].set_ylabel('Number of Sampling Hits')
 
-                # free time
+                # life time
                 dfmyaf_temp = df_myaf[mask3]
                 sns.histplot(x=dfmyaf_temp["generation"], ax=axs[2], bins=100)
                 axs[2].set_title('Generation Lengths of Malloc Objects')
@@ -195,10 +284,17 @@ def show_diagram():
                 fig.text(0.2, 0.2,  malloc_info, ha='left', va='top', fontsize=10, color='blue')
                 fig.text(0.6, 0.2, other_info, ha='left', va='top', fontsize=10, color='blue')
 
+                """
                 # save picture
                 picture_name = re.sub(r'\s+', '_', per_caller_info["caller_addr_str"].to_string())
-                plt.savefig(dir_path + "/" + picture_name)
-                plt.close(fig)
+                #plt.savefig(dir_path + "/" + picture_name)
+                #plt.close(fig)
+                
+
+                # calculate DTW
+                DTW(df[mask2], dir_path + "/" + picture_name) 
+
+            
 
         """        
             # choose witch to display
