@@ -20,7 +20,7 @@ gcc -O3 -g ./test_shadowing.c -o ./test_shadowing
 for (( i=0; i<$2; i=i+1 )); do
     echo 150000 | sudo tee /proc/sys/kernel/perf_event_max_sample_rate > /dev/null
 
-    perf record -e LLC-load-misses:ppp --count=$1 --timestamp --data ./test_shadowing > ./temp.log
+    perf record -e MEM_LOAD_UOPS_RETIRED.L3_MISS:ppp --count=$1 --timestamp --data ./test_shadowing > ./temp.log
     perf script -F +addr,+time,+data_src --ns -i ./perf.data > ./script.log
     
     python3 ./filter.py
