@@ -24,8 +24,8 @@ for (( i=0; i<$2; i=i+1 )); do
 
     #perf record -e ibs_op/cnt_ctl=1/pp -F max --timestamp --data ./test_perf_hit_random > ./temp.log
     #perf record -e ibs_op/cnt_ctl=1/pp --count=${count[2]} --timestamp --realtime=99 --mmap-pages=65536 --data ./test_perf_hit_random > ./temp.log    
-    #perf record -e ibs_op/cnt_ctl=1,l3missonly=1/pp --count=$1 --timestamp --data ./test_perf_hit_random > ./temp.log
-    perf record -e ibs_op//pp --count=$1 --timestamp --data ./test_perf_cachemisses > ./temp.log
+    perf record -e ibs_op/cnt_ctl=1,l3missonly=1/pp --count=$1 --timestamp --data ./test_perf_hit_random > ./temp.log
+    #perf record -e ibs_op//pp --count=$1 --timestamp --data ./test_perf_cachemisses > ./temp.log
 
     perf script -F +addr,+time,+data_src --ns -i ./perf.data > ./script.log
 
