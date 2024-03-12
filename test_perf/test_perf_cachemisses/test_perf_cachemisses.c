@@ -30,17 +30,17 @@ int main(){
     printf("size : %ld\n", sizeof(target));
 
     long long int n = 1;
-    n = n << 34; // ~= 1.72 * 10^10
+    n = n << 27; // ~= 1.72 * 10^10
     int temp = 0;
     for (long long int i = 0; i < n; i++) {    
         int index = lrand48() % target_num;
         //temp += atomic_load_explicit(&target[index], memory_order_relaxed);
         __asm__ __volatile__(
-            "clflush %0" 
+            "clflush %0 \n" 
+            "mfence \n"
             : 
             : "m" (target[index])
         );
-        _mm_mfence();
         temp += atomic_load_explicit(&target[index], memory_order_relaxed);
     }
     printf("temp : %d\n", temp);
