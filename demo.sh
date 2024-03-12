@@ -60,7 +60,8 @@ fi
 
 # start 
 python3 ./data_record.py &
-perf record -e ibs_op/cnt_ctl=1/pp --count=50000 --timestamp --data -o ./myperf.data ./program.sh
+#perf record -e ibs_op/cnt_ctl=1/pp --count=50000 --timestamp --data -o ./myperf.data ./program.sh
+perf record -e ibs_op/l3missonly=1,cnt_ctl=1/pp --count=1000 --timestamp --data -o ./myperf.data ./program.sh
 perf script -F +addr,+time,+data_src --ns -i ./myperf.data >> ./fifo
 
 # wait for ./data_record.py
@@ -75,6 +76,9 @@ echo 2 | sudo tee /proc/sys/kernel/randomize_va_space > /dev/null
 
 python3 ./data_merge.py
 cp ./data/myaf* ./result/
+cp ./data/endtime ./result/
+cp ./data/adjustment_time ./result/
+
 python3 ./data_show.py
 
 #rm -r ./data

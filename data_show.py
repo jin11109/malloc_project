@@ -13,6 +13,7 @@ import threading
 import bisect
 from fastdtw import fastdtw
 from scipy.spatial.distance import euclidean
+from scipy.stats import wasserstein_distance
 
 dtype = {
     "caller_addr" : int,
@@ -34,63 +35,31 @@ dtype = {
 thread_flag = True
 picture_size = (10, 8)
 dpi = 100
+endtime = -1
 
-"""
-def query(df_rel, df_abs, indicate):
-    global thread_flag
-    all_df = {
-        "rel" : df_rel,
-        "abs" : df_abs
-    }
-    while thread_flag:
-        dftype = input("rel or abs (or enter to skip): ")
-        if all_df.get(dftype) is None:
-            break
-        caller_addr_str = input("caller address : ")
-        #try:
-        if True:
-            if dftype == "abs":
-                fig = plt.figure(figsize=picture_size, dpi=dpi)
-                plt.title(dftype + "_" + caller_addr_str)
-                mask = all_df[dftype]["caller_addr_str"] == caller_addr_str
-                df_temp = all_df[dftype][mask]
-                print(df_temp)
-                sns.histplot(x=df_temp["hit_absolute_time"], kde=True, line_kws={"linewidth" : 5}, bins=100)
-
-                mask2 = indicate["caller_addr_str"] == caller_addr_str
-                print(indicate[mask2])
-
-                fig.show()
-
-            elif dftype == "rel":
-                fig = plt.figure(figsize=picture_size, dpi=dpi)
-                plt.title(dftype + "_" + caller_addr_str + " (discard interval small than 1s)")
-                mask = all_df[dftype]["caller_addr_str"] == caller_addr_str
-                df_temp = all_df[dftype][mask]
-                print(df_temp)
-                sns.histplot(x=df_temp["hit_relative_time"], kde=True, line_kws={"linewidth" : 5}, bins=100)
-
-                mask2 = indicate["caller_addr_str"] == caller_addr_str
-                print(indicate[mask2])
-
-                fig.show()
-
-            else:
-                continue
-        #except:
-        #    print("input error")
-"""
-
-
-def DTW(df_per_malloc, save_path):
+def DTW(df_per_malloc, save_path, malloc_info):
+    global endtime
     print(df_per_malloc)
     
+    # obtain the graph of all the data to be our standard for comparison
     standard = df_per_malloc["hit_absolute_time"].to_numpy()
     standard.sort()
-    print(standard)
-    if len(standard) < 200:
+    # create interval of hisplot bins
+    bin_edges = np.arange(0, endtime, endtime / 101)
+    bin_edges[0] -= 10
+    bin_edges[-1] += 10
+    # create x-axis to display graph
+    x_axis = bin_edges[0 : -1].copy()
+    x_axis[0] = 0
+    # convert the graph into a histogram
+    standard_hist, bins = np.histogram(standard, bins=bin_edges)
+    standard_hist_avg = standard_hist.copy() / float(malloc_info["caller_objects_nummean"].to_string(index = False))
+
+    # discard some mallocs which have few objects
+    if len(standard) < 200 or standard[-1] - standard[0] < 1:
         return
 
+    # obtain data graphs for each objec
     malloc_objs = df_per_malloc.groupby("data_addr", as_index=False).size()
     malloc_objs = malloc_objs["data_addr"].to_dict()
     #malloc_objs.columns = malloc_objs.columns.map(''.join)
@@ -107,25 +76,37 @@ def DTW(df_per_malloc, save_path):
         print(index, obj)
         mask = df_per_malloc["data_addr"] == obj
         obj_performance = df_per_malloc[mask]["hit_absolute_time"].to_numpy()
+        obj_performance_hist, bins = np.histogram(obj_performance, bins=bin_edges)
+        standard_hist_resize = standard_hist_avg.copy() * (len(obj_performance))
 
-        #obj_performance /= standard[-1]
-        sampled_standard = np.random.choice(standard, size=len(obj_performance), replace=False)
+        #obj_performance_hist /= standard[-1]
+        #sampled_standard = np.random.choice(standard, size=len(obj_performance), replace=True)
         #normalized_standard = standard / standard[-1]
-        sampled_normalized_standard = np.random.choice(standard, size=len(obj_performance), replace=False)
+        #sampled_normalized_standard = np.random.choice(standard, size=len(obj_performance_hist), replace=True)
+        
+        #print(standard_hist)
+        #print(standard_hist.shape)
+        #print(obj_performance_hist)
+        #print(obj_performance_hist.shape)
 
-        distance1, path1 = fastdtw(standard, obj_performance, dist=euclidean)
-        distance2, path2 = fastdtw(sampled_standard, obj_performance, dist=euclidean)
+        #distance1, path1 = fastdtw(standard_hist, obj_performance_hist, dist=2)
+        #distance2, path2 = fastdtw(standard_hist_resize, obj_performance_hist, dist=2)
+        distance1 = wasserstein_distance(x_axis, x_axis, standard_hist, obj_performance_hist)
+        distance2 = wasserstein_distance(x_axis, x_axis, standard_hist_resize, obj_performance_hist)
 
-        normalized_distance1 = distance1 / ((len(obj_performance) + len(standard) / 2))
-        normalized_distance2 = distance2 / ((len(obj_performance) + len(sampled_standard) / 2))
+        normalized_distance1 = distance1 / (len(obj_performance))
+        normalized_distance2 = distance2 / (len(obj_performance))
 
-        if len(obj_performance) > 10:
+        # save the picture of objects performance diagram
+        if len(obj_performance) > 0:
+            print("obj_performance", obj_performance)
+
             fig, axs = plt.subplots(1, 3, figsize=(14, 5), gridspec_kw={'bottom': 0.3, 'top': 0.9})
-            rel_bins = np.linspace(standard[0], standard[-1], 101)
-            sns.histplot(x=standard, ax=axs[0], bins=100)
-            sns.histplot(x=sampled_standard, ax=axs[1], bins=100)
-            sns.histplot(x=obj_performance, ax=axs[2], bins=rel_bins)
-            
+        
+            sns.lineplot(x=x_axis, y=standard_hist, ax=axs[0])
+            sns.lineplot(x=x_axis, y=standard_hist_resize, ax=axs[1])
+            sns.lineplot(x=x_axis, y=obj_performance_hist, ax=axs[2])            
+
             obj_info = "malloc object information" \
                         + "\n" + "|  DTW (normalized_standard and normalized obj_performance) : " + str(distance1) \
                         + "\n" + "|  DTW Normalized Distance : " + str(normalized_distance1) \
@@ -133,6 +114,7 @@ def DTW(df_per_malloc, save_path):
                         + "\n" + "|  DTW (sampled_normalized_standard and normalized obj_performance) : " + str(distance2) \
                         + "\n" + "|  DTW Normalized Distance : " + str(normalized_distance2)
             fig.text(0.2, 0.2,  obj_info, ha='left', va='top', fontsize=10, color='blue')
+
             fig.savefig(save_path + "_dtw" + str(index))
             plt.close(fig)
         
@@ -144,20 +126,15 @@ def DTW(df_per_malloc, save_path):
         
 
     fig, axs = plt.subplots(2, 2, figsize=(14, 14), gridspec_kw={'bottom': 0.2, 'top': 0.9})
-    #
-    #sns.scatterplot(x=hit_count, y=normalized_dtws, ax=axs[1])
     sns.histplot(x=hit_count, y=dtws, ax=axs[0][0], cbar=True)
-    #sns.scatterplot(x=hit_count, y=dtws, ax=axs[0][0])
     sns.histplot(x=hit_count, y=normalized_dtws, ax=axs[0][1], cbar=True)
-    #sns.scatterplot(x=hit_count, y=normalized_dtws, ax=axs[0][1])
     sns.histplot(x=hit_count, y=sampled_dtws, ax=axs[1][0], cbar=True)
+    #print(sampled_normalized_dtws, len(sampled_normalized_dtws))
+    #print(hit_count, len(hit_count))
     sns.histplot(x=hit_count, y=sampled_normalized_dtws, ax=axs[1][1], cbar=True)
 
     fig.savefig(save_path + "_all_dtws")
     plt.close(fig)
-
-
-    #distance, path = fastdtw(sequence1, sequence2, dist=euclidean)
 
     #print("DTW :", distance)
     #print("path :", path)
@@ -165,6 +142,8 @@ def DTW(df_per_malloc, save_path):
 
 
 def show_diagram():
+    global endtime
+
     fileresult_names = {}
     fileresult_notsampled_names = {}
     fileresult_myaf = {}
@@ -172,14 +151,17 @@ def show_diagram():
     all_data = os.listdir("./result")
     #print(all_data)
     for data in all_data:
-        pid = int(''.join(re.findall(r'\d+', data)), 10)
-        pids[pid] = True
-        if "result_not_be_sampled" in data:
-            fileresult_notsampled_names[pid] = "./result/" + data
-        elif "myaf" in data:
-            fileresult_myaf[pid] = "./result/" + data
-        else:
-            fileresult_names[pid] = "./result/" + data
+        if re.search(r'\d', data) is not None: 
+            pid = int(''.join(re.findall(r'\d+', data)), 10)
+            pids[pid] = True
+            if "result_not_be_sampled" in data:
+                fileresult_notsampled_names[pid] = "./result/" + data
+            elif "myaf" in data:
+                fileresult_myaf[pid] = "./result/" + data
+            else:
+                fileresult_names[pid] = "./result/" + data
+    with open("./result/endtime", "r") as f:
+        endtime = float(f.readline())
 
     
     for pid in pids:
@@ -292,7 +274,7 @@ def show_diagram():
                 
 
                 # calculate DTW
-                DTW(df[mask2], dir_path + "/" + picture_name) 
+                DTW(df[mask2], dir_path + "/" + picture_name, per_caller_info) 
 
             
 

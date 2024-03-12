@@ -62,7 +62,8 @@ fi
 
 # start 
 python3 ./data_record.py &
-perf record -e MEM_UOPS_RETIRED.ALL_STORES:ppp,MEM_UOPS_RETIRED.ALL_LOADS:ppp --count=20000 --timestamp --data -o ./myperf.data ./program.sh
+#perf record -e MEM_UOPS_RETIRED.ALL_STORES:ppp,MEM_UOPS_RETIRED.ALL_LOADS:ppp --count=20000 --timestamp --data -o ./myperf.data ./program.sh
+perf record -e MEM_LOAD_UOPS_RETIRED.L3_MISS:ppp --count=10000 --timestamp --data -o ./myperf.data ./program.sh
 perf script -F +addr,+time,+data_src -i ./myperf.data >> ./fifo
 
 # wait for ./data_capturer.py
@@ -76,6 +77,9 @@ echo 2 | sudo tee /proc/sys/kernel/randomize_va_space > /dev/null
 # merge data recorded from "data_record.py"
 python3 ./data_merge.py
 cp ./data/myaf* ./result/
+cp ./data/endtime ./result/
+cp ./data/adjustment_time ./result/
+
 # show the result and save picture
 python3 ./data_show.py
 
