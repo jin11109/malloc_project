@@ -203,7 +203,7 @@ void print_info_newpool(pid_t pid, void* begin, void* end, void* malloc_addr) {
     index += maddrlen;
     buffer[index++] = '\n';
 
-    write(2, buffer, index);
+    int wsize = write(2, buffer, index);
 }
 
 void print_info_free(pid_t pid, void* addr) {
@@ -230,7 +230,7 @@ void print_info_free(pid_t pid, void* addr) {
     index += addrlen;
     buffer[index++] = '\n';
 
-    write(2, buffer, index);
+    int wsize = write(2, buffer, index);
 }
 
 void print_info_alloc(pid_t pid, size_t size, void* addr, void* malloc_addr) {
@@ -276,7 +276,7 @@ void print_info_alloc(pid_t pid, size_t size, void* addr, void* malloc_addr) {
     index += maddrlen;
     buffer[index++] = '\n';
 
-    write(2, buffer, index);
+    int wsize = write(2, buffer, index);
 }
 
 /*============================ memory pool operations ======================
@@ -405,7 +405,7 @@ Mem_pool* pool_insert(void* return_addr, Mem_pool* new_pool, size_t size) {
 
         // test
         if (*pool_counter + 1 >= MAX_QUANTITY) {
-            write(2, "exceed max number of memory pool\n",
+            int wsize = write(2, "exceed max number of memory pool\n",
                   sizeof("exceed max number of memory pool\n"));
         }
         assert(*pool_counter + 1 < MAX_QUANTITY);
