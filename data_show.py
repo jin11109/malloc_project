@@ -169,20 +169,24 @@ def hit_interval(df_per_malloc, save_path, malloc_info, df_myaf):
         obj_size = int(df_per_malloc[mask]["size"].iloc[0: 1].to_string(index = False), 10)
         obj_performance.append(obj_life_time)
 
-        last_time = -1
+        # insert size
+        obj_sizes.append(obj_size)
+        if obj_size <= 128 * 1024:
+            obj_sizes_128kfilter.append(obj_size)
+
+        last_time = -100
         obj_performance.sort()
         for hit_time in obj_performance:
             #print(obj_alloc_time, obj_free_time)
-            if last_time == -1:
+            if last_time == -100:
                 interval = hit_time
+                continue
             else:
                 interval = hit_time - last_time
             
             intervals.append(interval)
-            obj_sizes.append(obj_size)
             if obj_size <= 128 * 1024:
                 intervals_128kfilter.append(interval)
-                obj_sizes_128kfilter.append(obj_size)
             last_time = hit_time
 
     # add objects data which not been sampled
