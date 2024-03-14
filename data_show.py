@@ -165,9 +165,11 @@ def hit_interval(df_per_malloc, save_path, malloc_info, df_myaf):
         mask = df_per_malloc["data_addr"] == obj
         obj_performance = df_per_malloc[mask]["hit_absolute_time"].to_numpy().tolist()
         #obj_alloc_time = float(df_per_malloc[mask]["alloc_time"].iloc[0: 1].to_string(index = False))
-        obj_life_time = float(df_per_malloc[mask]["free_time"].iloc[0: 1].to_string(index = False))
+        #print(df_per_malloc[mask])
+        obj_life_time = float(df_per_malloc[mask]["interval_time"].iloc[0: 1].to_string(index = False))
         obj_size = int(df_per_malloc[mask]["size"].iloc[0: 1].to_string(index = False), 10)
         obj_performance.append(obj_life_time)
+        print("objper", obj_performance)
 
         # insert size
         obj_sizes.append(obj_size)
@@ -180,7 +182,6 @@ def hit_interval(df_per_malloc, save_path, malloc_info, df_myaf):
             #print(obj_alloc_time, obj_free_time)
             if last_time == -100:
                 interval = hit_time
-                continue
             else:
                 interval = hit_time - last_time
             
