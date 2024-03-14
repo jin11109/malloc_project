@@ -141,6 +141,99 @@ def DTW(df_per_malloc, save_path, malloc_info):
     print("\n\n\n")
 
 
+def hit_interval(df_per_malloc, save_path, malloc_info, df_myaf):
+    global endtime
+    print(df_per_malloc)
+    print("df myaf")
+    print(df_myaf)
+
+    malloc_objs_df = df_per_malloc.groupby("data_addr", as_index=False).size()
+    malloc_objs = malloc_objs_df["data_addr"].to_dict()
+
+    # data and information
+    intervals = []
+    intervals_128kfilter = []
+    obj_sizes = []
+    obj_sizes_128kfilter = []
+
+    # for every objects
+    for index in malloc_objs:
+        obj = malloc_objs[index]
+        print(index, obj)
+        #print(df_per_malloc)
+
+        mask = df_per_malloc["data_addr"] == obj
+        obj_performance = df_per_malloc[mask]["hit_absolute_time"].to_numpy().tolist()
+        #obj_alloc_time = float(df_per_malloc[mask]["alloc_time"].iloc[0: 1].to_string(index = False))
+        obj_life_time = float(df_per_malloc[mask]["free_time"].iloc[0: 1].to_string(index = False))
+        obj_size = int(df_per_malloc[mask]["size"].iloc[0: 1].to_string(index = False), 10)
+        obj_performance.append(obj_life_time)
+
+        last_time = -1
+        obj_performance.sort()
+        for hit_time in obj_performance:
+            #print(obj_alloc_time, obj_free_time)
+            if last_time == -1:
+                interval = hit_time
+            else:
+                interval = hit_time - last_time
+            
+            intervals.append(interval)
+            obj_sizes.append(obj_size)
+            if obj_size <= 128 * 1024:
+                intervals_128kfilter.append(interval)
+                obj_sizes_128kfilter.append(obj_size)
+            last_time = hit_time
+
+    # add objects data which not been sampled
+    mask = ~df_myaf["data_addr"].isin(malloc_objs_df["data_addr"])
+    mask_128ksize = df_myaf["size"] <= 128 * 1024
+    for index, obj_info in df_myaf[mask].iterrows():
+        intervals.append(float(obj_info["generation"]))
+        obj_sizes.append(float(obj_info["size"]))
+    for index, obj_info in df_myaf[mask & mask_128ksize].iterrows():
+        intervals_128kfilter.append(float(obj_info["generation"]))
+        obj_sizes_128kfilter.append(float(obj_info["size"]))
+
+    #print("intervals:", intervals)
+    #print("\n")
+    #print(intervals_128kfilter)
+    #print("\n\n\n")
+            
+
+    #save picture
+    fig, axs = plt.subplots(1, 2, figsize=(14, 5), gridspec_kw={'bottom': 0.3, 'top': 0.9})
+    sns.histplot(x=intervals, ax=axs[0], bins=100)
+    axs[0].set_title('Count Sampling Hits Ineterval time')
+    axs[0].set_ylabel('count')
+    axs[0].set_xlabel('interval time (second)')
+    axs[0].set_yscale('log')
+    sns.histplot(x=intervals_128kfilter, ax=axs[1], bins=100)
+    axs[1].set_title('Count Sampling Hits Ineterval time with 128k filter')
+    axs[1].set_ylabel('count')
+    axs[1].set_xlabel('interval time (second)')
+    axs[1].set_yscale('log')
+    
+    avgsize = sum(obj_sizes) / len(obj_sizes)
+    if len(obj_sizes_128kfilter) == 0:
+        avgsize_filter128k = 0
+    else:
+        avgsize_filter128k = sum(obj_sizes_128kfilter) / len(obj_sizes_128kfilter)
+    
+    obj_info = "malloc objects information" \
+                + "\n" + "|  avg object size : " +  str(avgsize)\
+                + "\n" + "|  Number of Objects : " + str(len(obj_sizes)) \
+                + "\n" + "|  " + str() \
+                + "\n" + "|  avg object size without which size bigger than 128k : " + str(avgsize_filter128k) \
+                + "\n" + "|  Number of Objects without which size bigger than 128k : " + str(len(obj_sizes_128kfilter)) \
+                + "\n" + "|  " + str() \
+                + "\n" + "|  " + str()
+    fig.text(0.2, 0.2,  obj_info, ha='left', va='top', fontsize=10, color='blue')
+    fig.savefig(save_path + "_interval")
+    plt.close(fig)
+
+
+
 def show_diagram():
     global endtime
 
@@ -274,8 +367,10 @@ def show_diagram():
                 
 
                 # calculate DTW
-                DTW(df[mask2], dir_path + "/" + picture_name, per_caller_info) 
+                #DTW(df[mask2], dir_path + "/" + picture_name, per_caller_info) 
 
+                # calculate hit interval
+                hit_interval(df[mask2], dir_path + "/" + picture_name, per_caller_info, df_myaf[mask3])
             
 
         """        
