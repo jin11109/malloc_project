@@ -15,12 +15,23 @@ cp ../../pin/source/tools/ManualExamples/obj-intel64/catch_ldst.so ./
 gcc -shared -fPIC -O3 -pthread ./mymalloc.c -o ./mymalloc.so
 sudo cp ./mymalloc.so /lib/
 
-# create fifo
-if [ ! -e "./fifo" ]; then
-    mkfifo "./fifo"
+# compile cache simulation program
+gcc -O3 ./cachesim.c -o ./cachesim
+
+# create fifo for preload fubction
+if [ ! -e "./fifo_preload" ]; then
+    mkfifo "./fifo_preload"
 else
-    rm ./fifo
-    mkfifo "./fifo"
+    rm ./fifo_preload
+    mkfifo "./fifo_preload"
+fi
+
+# create fifo for intel pin tools
+if [ ! -e "./fifo_pintools" ]; then
+    mkfifo "./fifo_pintools"
+else
+    rm ./fifo_pintools
+    mkfifo "./fifo_pintools"
 fi
 
 # this "data" folder include data from "data_record.py" and the temporary files from "data_merge.py"  
@@ -49,7 +60,7 @@ fi
 # create the shell with preload 
 echo "#!/bin/bash" > ./program.sh
 echo "export LD_PRELOAD=\$LD_PRELOAD:/lib/mymalloc.so" >> ./program.sh
-program_command="$* 2>> ./fifo"
+program_command="$* 2>> ./fifo_preload"
 echo $program_command >> ./program.sh
 chmod +x ./program.sh
 
@@ -57,7 +68,8 @@ chmod +x ./program.sh
 echo -e "\n\n=============================================================\n\n" 
 echo -e "start experiment\n"
 #python3 ./data_record.py &
-cat ./fifo &
+./cachesim &
+cat ./fifo_preload &
 ../../pin/pin -follow_execv -t /catch_ldst.so -- ./program.sh
 
 # wait for ./data_record.py
