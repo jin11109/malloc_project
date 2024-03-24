@@ -1,22 +1,32 @@
 #!/bin/bash
 
+set -e
+
 if [ $# == 0 ]; then
     echo "demo.sh : parameter error"
     exit 0
 fi
 
+# 
+echo 0 | sudo tee /proc/sys/kernel/randomize_va_space > /dev/null
+
 # compile pin tools
 cp ./catch_ldst.cpp ../../pin/source/tools/ManualExamples/
-mkdir ../../pin/source/tools/ManualExamples/obj-intel64/
+if [ ! -e "../../pin/source/tools/ManualExamples/obj-intel64/" ]; then
+    mkdir "../../pin/source/tools/ManualExamples/obj-intel64/"
+fi
 make -C ../../pin/source/tools/ManualExamples/ obj-intel64/catch_ldst.so TARGET=intel64
-cp ../../pin/source/tools/ManualExamples/obj-intel64/catch_ldst.so ./
+cp ../../pin/source/tools/ManualExamples/obj-intel64/catch_ldst.so ./ 
 
 # compile preload program
 gcc -shared -fPIC -O3 -pthread ./mymalloc.c -o ./mymalloc.so
 sudo cp ./mymalloc.so /lib/
 
 # compile cache simulation program
-gcc -O3 ./cachesim.c -o ./cachesim
+gcc -O3 ./cachesim.c -o ./cachesim || { 
+    echo "ERROR : compile cache simulation program fail";
+    exit 0;
+}
 
 # create fifo for preload fubction
 if [ ! -e "./fifo_preload" ]; then
@@ -67,21 +77,25 @@ chmod +x ./program.sh
 # start
 echo -e "\n\n=============================================================\n\n" 
 echo -e "start experiment\n"
-#python3 ./data_record.py &
+
+python3 ./data_record.py &
 ./cachesim &
-cat ./fifo_preload &
+#cat ./fifo_pintools &
+#cat ./fifo_preload &
 ../../pin/pin -follow_execv -t /catch_ldst.so -- ./program.sh
 
 # wait for ./data_record.py
-#wait
+wait
+
+echo 1 | sudo tee /proc/sys/kernel/randomize_va_space > /dev/null
 
 # merge the data from pin tool and LD_PRELOAD function
-#python3 ./data_merge.py
-#cp ./data/myaf* ./result/
-#cp ./data/endtime ./result/
-#cp ./data/adjustment_time ./result/
+python3 ./data_merge.py
+cp ./data/myaf* ./result/
+cp ./data/endtime ./result/
+cp ./data/adjustment_time ./result/
 
 # show the result
-#python3 ./data_show.py
+python3 ./data_show.py
 
-rm ./fifo
+rm ./fifo_pintools ./fifo_preload
