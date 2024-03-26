@@ -56,8 +56,8 @@ def DTW(df_per_malloc, save_path, malloc_info):
     standard_hist_avg = standard_hist.copy() / float(malloc_info["caller_objects_nummean"].to_string(index = False))
 
     # discard some mallocs which have few objects
-    if len(standard) < 200 or standard[-1] - standard[0] < 1:
-        return
+    #if len(standard) < 200 or standard[-1] - standard[0] < 1:
+    #    return
 
     # obtain data graphs for each objec
     malloc_objs = df_per_malloc.groupby("data_addr", as_index=False).size()
@@ -372,7 +372,7 @@ def show_diagram():
                 
 
                 # calculate DTW
-                #DTW(df[mask2], dir_path + "/" + picture_name, per_caller_info) 
+                DTW(df[mask2], dir_path + "/" + picture_name, per_caller_info) 
 
                 # calculate hit interval
                 hit_interval(df[mask2], dir_path + "/" + picture_name, per_caller_info, df_myaf[mask3])

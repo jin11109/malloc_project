@@ -1,7 +1,7 @@
-#include <stdio.h>
-#include <time.h>
-#include <string.h>
 #include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include <time.h>
 
 typedef struct ldstdata {
         int pid;
@@ -68,19 +68,6 @@ int is_hit(unsigned long addr, char rw) {
             return 0;
         }
     }
-    /*
-    // evicted write back to memory
-    if (cacheSet->dirty[cacheSet->run]) {
-        for (int i = 0; i < 64; i = i + 8) {
-            struct memop *elem = get_memop();
-            elem->type = llc_w_t;
-            elem->data_addr = (cacheSet->cache_addr[cacheSet->run] << 6) + i;
-            elem->size = 8;
-            elem->Real_time =
-                (unsigned long)((getRdtsc() - init_time) / cpu_hz * 1000000);
-        }
-    }
-    */
 
     cacheSet->cache_addr[cacheSet->run] = cache_addr;
     cacheSet->valid[cacheSet->run] = 1;
@@ -91,12 +78,26 @@ int is_hit(unsigned long addr, char rw) {
     return 0;
 }
 
-void output(Ldstdata data, FILE *file) {
-    // count++;
-    // if (count < 100) { return; }
-    fprintf(file, "%d %p %d %lf %c\n", data.pid, data.addr, data.size,
-            data.time, data.rw);
-    // count = 0;
+int cachesim(unsigned long addr, char rw, int size) {
+    unsigned long tmp = addr >> 6;
+    int cache_miss = 0;
+    // check if address across cache lines
+    for (int align = 1; align || (addr >> 6) != tmp;) {
+        if (is_hit(addr, rw) == 0) {
+            cache_miss++;
+        }
+        if (!align) break;
+        addr = addr + size - 1;
+        align = 0;
+    }
+    return cache_miss;
+}
+
+void output(Ldstdata data, FILE *file, int misses) {
+    for (int i = 0; i < misses; i++) {
+        fprintf(file, "%d %p %d %lf %c\n", data.pid, data.addr, data.size,
+                data.time, data.rw);
+    }
 }
 
 int main() {
@@ -122,9 +123,9 @@ int main() {
 
         sscanf(line, "%d %p %d %c\n", &new.pid, &new.addr, &new.size, &new.rw);
 
-        if (!is_hit((unsigned long)(intptr_t)new.addr, new.rw)) {
-            output(new, output_file);
-        }
+        int cache_misses =
+            cachesim((unsigned long)(intptr_t) new.addr, new.rw, new.size);
+        output(new, output_file, cache_misses);
     }
 
     fclose(fifo);
