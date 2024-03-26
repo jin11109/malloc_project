@@ -124,7 +124,7 @@ int main() {
         sscanf(line, "%d %p %d %c\n", &new.pid, &new.addr, &new.size, &new.rw);
 
         int cache_misses =
-            cachesim((unsigned long)(intptr_t) new.addr, new.rw, new.size);
+            cachesim((uintptr_t) new.addr, new.rw, new.size);
         output(new, output_file, cache_misses);
     }
 
