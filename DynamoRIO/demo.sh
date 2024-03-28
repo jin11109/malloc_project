@@ -6,10 +6,12 @@ if [ $# == 0 ]; then
     exit 0
 fi
 
-./setenv.sh || {
-    echo "ERROR : set DynamoRIO camke fail";
-    exit 0;
-}
+if [ ! -e "../../DynamoRIO-Linux-10.0.0/samples/build/" ]; then
+    ./setenv.sh || {
+        echo "ERROR : set DynamoRIO camke fail";
+        exit 0;
+    }   
+fi
 
 echo 0 | sudo tee /proc/sys/kernel/randomize_va_space > /dev/null
 
