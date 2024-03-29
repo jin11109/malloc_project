@@ -64,12 +64,11 @@ gcc -O3 ./cachesim.c -o ./cachesim || {
     exit 0;
 }
 
-# create the shell with preload 
-echo "#!/bin/bash" > ./program.sh
-echo "export LD_PRELOAD=\$LD_PRELOAD:/lib/mymalloc.so" >> ./program.sh
-program_command="$* 2>> ./fifo_preload"
-echo $program_command >> ./program.sh
-chmod +x ./program.sh
+# compile cache simulation program
+gcc -O3 ./program.c -o ./program || { 
+    echo "ERROR : compile  program.c fail";
+    exit 0;
+}
 
 cp ./memtrace_x86.c ../../DynamoRIO-Linux-10.0.0/samples/
 make -C ../../DynamoRIO-Linux-10.0.0/samples/build/ memtrace_x86_text
@@ -82,7 +81,7 @@ echo -e "=============================================================\n\n"
 
 python3 ./data_record.py &
 ./cachesim &
-../../DynamoRIO-Linux-10.0.0/bin64/drrun -c libmemtrace_x86_text.so -- ./progran.sh
+../../DynamoRIO-Linux-10.0.0/bin64/drrun -c libmemtrace_x86_text.so -- ./program $*
 
 # wait for ./data_record.py
 wait
