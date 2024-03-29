@@ -58,6 +58,12 @@ echo 0 | sudo tee /proc/sys/kernel/randomize_va_space > /dev/null
 gcc -shared -fPIC -O3 -pthread ./mymalloc.c -o ./mymalloc.so
 sudo cp ./mymalloc.so /lib/
 
+# compile cache simulation program
+gcc -O3 ./cachesim.c -o ./cachesim || { 
+    echo "ERROR : compile cache simulation program fail";
+    exit 0;
+}
+
 # create the shell with preload 
 echo "#!/bin/bash" > ./program.sh
 echo "export LD_PRELOAD=\$LD_PRELOAD:/lib/mymalloc.so" >> ./program.sh
