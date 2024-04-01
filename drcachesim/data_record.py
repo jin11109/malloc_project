@@ -38,13 +38,15 @@ def capture_data():
     print("data_record.py : read fifo for the mymalloc.so output : ./fifo open")
     with open("./fifo_preload", "r") as fifo:
 
-        start_time = time.time()
+        with open("./data/starttime", "r") as f:
+            record_start_time = time.monotonic()
+            start_time = int(f.readline(), 10) / 1000000
         while True:
             data = fifo.readline()
     
             if len(data) == 0:
                 print("data_record.py : read fifo for the mymalloc.so output : ./fifo close with get zero")
-                end_time = time.time() - start_time
+                end_time = time.monotonic() - record_start_time
                 with open("./data/endtime", "w") as f:
                     f.write(str(end_time) + "\n")
                 
@@ -74,9 +76,9 @@ def capture_data():
                     write_data(["begin", "end", "caller_addr"], filename)
 
             if info[0] == "mya":
-                write_data([int(info[2], 10), int(info[3], 16), int(info[4], 16), time.time() - start_time], filename)
+                write_data([int(info[2], 10), int(info[3], 16), int(info[4], 16), int(info[5], 10) / 1000000 - start_time], filename)
             elif info[0] == "myf":
-                write_data([int(info[2], 16), time.time() - start_time], filename)
+                write_data([int(info[2], 16), int(info[3], 10) / 1000000 - start_time], filename)
             elif info[0] == "myi":
                 write_data([int(info[2], 16), int(info[3], 16), int(info[4], 16)], filename)
 

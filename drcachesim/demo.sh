@@ -45,7 +45,13 @@ sudo cp ./mymalloc.so /lib/
 
 # compile c to execute target program
 gcc -O3 ./program.c -o ./program || { 
-    echo "ERROR : compile  program.c fail";
+    echo "ERROR : compile program.c fail";
+    exit 0;
+}
+
+# compile c to record start time
+gcc -O3 ./record_starttime.c -o ./record_starttime || { 
+    echo "ERROR : compile record_starttime.c fail";
     exit 0;
 }
 
@@ -54,6 +60,7 @@ echo -e "\n\n============================================================="
 echo -e "start experiment"
 echo -e "=============================================================\n\n" 
 
+./record_starttime
 python3 ./data_record.py &
 ../../mydynamorio/dynamorio/build/bin64/drrun -t drcachesim -LL_miss_file ./data/cachemisses.csv.gz -L0_filter  -- ./program $*
 
@@ -74,4 +81,4 @@ cp ./data/adjustment_time ./result/
 # show the result
 python3 ./data_show.py
 
-rm ./fifo_memtrace ./fifo_preload
+rm ./fifo_preload
