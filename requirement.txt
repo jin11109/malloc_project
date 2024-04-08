@@ -1,0 +1,9 @@
+numpy
+progressbar2
+matplotlib
+seaborn
+pandas
+vaex 
+xarray
+fastdtw
+scipy
