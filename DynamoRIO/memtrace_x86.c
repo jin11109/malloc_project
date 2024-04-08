@@ -83,7 +83,7 @@ typedef struct _mem_ref_t {
 } mem_ref_t;
 
 /* Max number of mem_ref a buffer can have */
-#define MAX_NUM_MEM_REFS 1
+#define MAX_NUM_MEM_REFS 8192
 /* The size of memory buffer for holding mem_refs. When it fills up,
  * we dump data from the buffer to the file.
  */

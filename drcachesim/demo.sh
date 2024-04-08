@@ -62,7 +62,8 @@ echo -e "=============================================================\n\n"
 
 ./record_starttime
 python3 ./data_record.py &
-../../mydynamorio/dynamorio/build/bin64/drrun -t drcachesim -LL_miss_file ./data/cachemisses.csv.gz -L0_filter  -- ./program $*
+../../mydynamorio/dynamorio/build/bin64/drrun -t drcachesim -LL_miss_file ./data/cachemisses.csv.gz -- ./program $*
+#../../mydynamorio/dynamorio/build/bin64/drrun -t drcachesim -LL_miss_file ./data/cachemisses.csv.gz -L0_filter  -- ./program $*
 
 # wait for ./data_record.py
 wait

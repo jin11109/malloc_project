@@ -98,7 +98,7 @@ def DTW(df_per_malloc, save_path, malloc_info):
         normalized_distance2 = distance2 / (len(obj_performance))
 
         # save the picture of objects performance diagram
-        if len(obj_performance) > 0:
+        if len(obj_performance) > 1:
             print("obj_performance", obj_performance)
 
             fig, axs = plt.subplots(1, 3, figsize=(14, 5), gridspec_kw={'bottom': 0.3, 'top': 0.9})
@@ -128,10 +128,10 @@ def DTW(df_per_malloc, save_path, malloc_info):
     fig, axs = plt.subplots(2, 2, figsize=(14, 14), gridspec_kw={'bottom': 0.2, 'top': 0.9})
     sns.histplot(x=hit_count, y=dtws, ax=axs[0][0], cbar=True)
     sns.histplot(x=hit_count, y=normalized_dtws, ax=axs[0][1], cbar=True)
-    sns.histplot(x=hit_count, y=sampled_dtws, ax=axs[1][0], cbar=True)
+    #sns.histplot(x=hit_count, y=sampled_dtws, ax=axs[1][0], cbar=True)
     #print(sampled_normalized_dtws, len(sampled_normalized_dtws))
     #print(hit_count, len(hit_count))
-    sns.histplot(x=hit_count, y=sampled_normalized_dtws, ax=axs[1][1], cbar=True)
+    #sns.histplot(x=hit_count, y=sampled_normalized_dtws, ax=axs[1][1], cbar=True)
 
     fig.savefig(save_path + "_all_dtws")
     plt.close(fig)

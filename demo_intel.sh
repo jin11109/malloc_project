@@ -63,7 +63,7 @@ fi
 # start 
 python3 ./data_record.py &
 #perf record -e MEM_UOPS_RETIRED.ALL_STORES:ppp,MEM_UOPS_RETIRED.ALL_LOADS:ppp --count=20000 --timestamp --data -o ./myperf.data ./program.sh
-perf record -e MEM_LOAD_UOPS_RETIRED.L3_MISS:ppp --count=10000 --timestamp --data -o ./myperf.data ./program.sh
+perf record -e MEM_LOAD_UOPS_RETIRED.L3_MISS:ppp --count=500 --all-user --timestamp --data -o ./myperf.data ./program.sh
 perf script -F +addr,+time,+data_src -i ./myperf.data >> ./fifo
 
 # wait for ./data_capturer.py

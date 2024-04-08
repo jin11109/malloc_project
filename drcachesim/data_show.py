@@ -170,7 +170,7 @@ def record_objs(obj_sizes, statistics_hits, statistics_lifetime, save_path):
     fig.savefig(save_path + "_all_obj")
     plt.close(fig)
 
-def record_obj_perf(obj_life_time, obj_size, obj_interval, obj_performance, save_path, index):
+def record_obj_perf(obj_life_time, obj_size, obj_interval, obj_performance, save_path, obj_addr, index):
     
     #save picture
     fig, axs = plt.subplots(1, 2, figsize=(14, 5), gridspec_kw={'bottom': 0.3, 'top': 0.9})
@@ -186,9 +186,9 @@ def record_obj_perf(obj_life_time, obj_size, obj_interval, obj_performance, save
     axs[1].set_yscale('log')
     
     obj_info = "malloc object information" \
+                + "\n" + "|  obj addr : " + obj_addr \
                 + "\n" + "|  object size : " +  str(obj_size)\
                 + "\n" + "|  life time : " + str(obj_life_time) \
-                + "\n" + "|  " + str() \
                 + "\n" + "|  " + str() \
                 + "\n" + "|  " + str() \
                 + "\n" + "|  " + str() \
@@ -231,6 +231,7 @@ def hit_interval(df_per_malloc, save_path, malloc_info, df_myaf):
         obj_size = int(df_per_malloc[mask]["size"].iloc[0: 1].to_string(index = False), 10)
         obj_performance_without_lifetime = obj_performance
         obj_performance.append(obj_life_time)
+        obj_addr = hex(int(df_per_malloc[mask]["data_addr"].iloc[0: 1].to_string(index = False), 10))
         
         # insert size
         obj_sizes.append(obj_size)
@@ -258,7 +259,7 @@ def hit_interval(df_per_malloc, save_path, malloc_info, df_myaf):
 
         # record other information
         if len(obj_performance) > 100:
-            record_obj_perf(obj_life_time, obj_size, obj_interval, obj_performance_without_lifetime, save_path, index)
+            record_obj_perf(obj_life_time, obj_size, obj_interval, obj_performance_without_lifetime, save_path, obj_addr, index)
         
         statistics_hits.append(len(obj_performance_without_lifetime))
         statistics_lifetime.append(obj_life_time)
@@ -407,6 +408,9 @@ def show_diagram():
             
             # make pictures with every malloc address 
             for i in range(number_of_sampled_malloc):
+                #if i != 48:
+                #    continue
+
                 per_caller_info = indicate.iloc[i:i + 1, :]
                 print(per_caller_info)
                 

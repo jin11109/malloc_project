@@ -27,7 +27,8 @@ clear
 #include <sys/mman.h>
 #include <sys/syscall.h>
 #include <unistd.h>
-#include <time.h>
+//#include <time.h>
+#include <sys/time.h>
 
 pthread_mutex_t malloc_mutex;
 
@@ -174,9 +175,15 @@ void print_info_newpool(pid_t pid, void* begin, void* end, void* malloc_addr) {
     pidlen = num_to_string(pid, pid_s);
     maddrlen = addr_to_string(malloc_addr, malloc_addr_s);
 
+    /*
     struct timespec ts;
     clock_gettime(CLOCK_MONOTONIC, &ts);
     unsigned long long time = ts.tv_sec * 1000000 + ts.tv_nsec / 1000;
+    */    
+    struct timeval t;
+    gettimeofday(&t, NULL);
+    unsigned long long time = t.tv_sec * 1000000 + t.tv_usec;
+
     timelen = num_to_string(time, time_s);
 
     int index = 0;
@@ -224,9 +231,15 @@ void print_info_free(pid_t pid, void* addr) {
     addrlen = addr_to_string(addr, addr_s);
     pidlen = num_to_string(pid, pid_s);
 
+    /*
     struct timespec ts;
     clock_gettime(CLOCK_MONOTONIC, &ts);
     unsigned long long time = ts.tv_sec * 1000000 + ts.tv_nsec / 1000;
+    */
+    struct timeval t;
+    gettimeofday(&t, NULL);
+    unsigned long long time = t.tv_sec * 1000000 + t.tv_usec;
+
     timelen = num_to_string(time, time_s);
 
     int index = 0;
@@ -267,10 +280,15 @@ void print_info_alloc(pid_t pid, size_t size, void* addr, void* malloc_addr) {
     pidlen = num_to_string(pid, pid_s);
     sizelen = num_to_string(size, size_s);
     maddrlen = addr_to_string(malloc_addr, malloc_addr_s);
-
+    /*
     struct timespec ts;
     clock_gettime(CLOCK_MONOTONIC, &ts);
     unsigned long long time = ts.tv_sec * 1000000 + ts.tv_nsec / 1000;
+    */
+    struct timeval t;
+    gettimeofday(&t, NULL);
+    unsigned long long time = t.tv_sec * 1000000 + t.tv_usec;
+    
     timelen = num_to_string(time, time_s);
 
     int index = 0;

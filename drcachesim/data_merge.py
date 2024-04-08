@@ -344,6 +344,10 @@ def deal_with_files():
             gc.collect()
 
     # adjust time
+    adjustment_time = 0
+    with open("./data/adjustment_time", "w") as f:
+        f.write(str(0) + "\n")
+    '''
     adjustment_time  = -1
     temp1 = []
     temp2 = []
@@ -365,7 +369,7 @@ def deal_with_files():
 
     with open("./data/adjustment_time", "w") as f:
         f.write(str(adjustment_time) + "\n")
-
+    '''
     
     # export result
     pids = {}
