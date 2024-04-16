@@ -8,8 +8,13 @@ Start drcachesim
 
     # in malloc_project 
     mkdir ../mydynamorio && cd ../mydynamorio
-
-    git clone --recurse-submodules -j4 https://github.com/DynamoRIO/dynamorio.git
+    
+    git clone --recurse-submodules -j4 https://github.com/jin11109/dynamorio.git
+    git branch -r | grep -v '\->' | while read remote; do git branch --track "${remote#origin/}" "$remote"; done
+    # for online output
+    git checkout online
+    # for offline 
+    git checkline offline
 
     cd dynamorio && mkdir build && cd build
 
@@ -39,8 +44,8 @@ Start drcachesim
         ```
         add below texts into limits.conf
         ```text
-        * soft nofile 4096
-        * hard nofile 4096
+        * soft nofile 32768
+        * hard nofile 32768
         ```
         ```bash
         reboot
