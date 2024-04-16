@@ -17,7 +17,7 @@ Start drcachesim
     # for online output
     git checkout online
     # for offline 
-    git checkline offline
+    git checkout offline
 
     mkdir build && cd build
 
