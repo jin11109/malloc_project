@@ -10,13 +10,16 @@ Start drcachesim
     mkdir ../mydynamorio && cd ../mydynamorio
     
     git clone --recurse-submodules -j4 https://github.com/jin11109/dynamorio.git
+    
+    cd ./dynamorio
     git branch -r | grep -v '\->' | while read remote; do git branch --track "${remote#origin/}" "$remote"; done
+
     # for online output
     git checkout online
     # for offline 
     git checkline offline
 
-    cd dynamorio && mkdir build && cd build
+    mkdir build && cd build
 
     cmake ..
 
