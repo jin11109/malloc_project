@@ -71,8 +71,6 @@ wait
 gzip -d ./data/cachemisses.csv.gz 
 python3 ./data_split.py
 
-echo 1 | sudo tee /proc/sys/kernel/randomize_va_space > /dev/null
-
 # merge the data from pin tool and LD_PRELOAD function
 python3 ./data_merge.py
 cp ./data/myaf* ./result/
@@ -83,3 +81,4 @@ cp ./data/adjustment_time ./result/
 python3 ./data_show.py
 
 rm ./fifo_preload
+echo 1 | sudo tee /proc/sys/kernel/randomize_va_space > /dev/null
