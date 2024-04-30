@@ -130,7 +130,7 @@ def DTW(df_per_malloc, savepath, malloc_info):
     print("\n\n\n")
 
 # save the picture shows that the count of hits and size of all objs alloced from this malloc
-def record_objs(obj_sizes, statistics_hits, statistics_lifetime, savepath):
+def record_objs(obj_sizes, statistics_hits, statistics_lifetime, no_event_objs, savepath):
     number_of_short_lifetime = 0
     number_of_total_objs = len(obj_sizes)
     number_of_zreo_hit = 0 
@@ -169,6 +169,35 @@ def record_objs(obj_sizes, statistics_hits, statistics_lifetime, savepath):
                 + "\n" + "|  " + str()
     fig.text(0.2, 0.2,  obj_info, ha='left', va='top', fontsize=10, color='blue')
     fig.savefig(savepath + "_all_obj")
+    plt.close(fig)
+
+    # for objs don't have any event
+    no_event_obj_lifetime = no_event_objs["generation"]
+    no_event_obj_sizes = no_event_objs["size"]
+    fig, axs = plt.subplots(1, 2, figsize=(14, 7), gridspec_kw={'bottom': 0.3, 'top': 0.9})
+    sns.histplot(x=no_event_obj_lifetime, ax=axs[0], bins=100)
+    axs[0].set_title('Counting the number of lifetime')
+    axs[0].set_ylabel('number of objects')
+    axs[0].set_xlabel('value of lifetime(seconds)')
+    axs[0].set_yscale('log')
+    sns.histplot(x=no_event_obj_sizes, ax=axs[1], bins=100)
+    axs[1].set_title('Measuring object sizes')
+    axs[1].set_ylabel('number of objects')
+    axs[1].set_xlabel('sizes')
+    axs[1].set_yscale('log')
+    
+    number_of_total_no_event_objs = len(no_event_objs)
+    number_of_no_event_objs_shortlifetime = len(no_event_objs[no_event_objs["generation"] < 5])
+    number_of_no_event_objs_smallsize = len(no_event_objs[no_event_objs["size"] < 64])
+    obj_info = "malloc objects information" \
+                + "\n" + "|  Number of tatal no event objects : " + str(number_of_total_no_event_objs) \
+                + "\n" + "|  Number of no event objects with lifetime < 5 : " +  str(number_of_no_event_objs_shortlifetime)\
+                + "\n" + "|  Number of no event Objects with lifetime >= 5 : " + str(number_of_total_no_event_objs - number_of_no_event_objs_shortlifetime) \
+                + "\n" + "|  Number of no event objects with size < 64 : " + str(number_of_no_event_objs_smallsize) \
+                + "\n" + "|  Number of no event objects with size >= 64 : " + str(number_of_total_no_event_objs - number_of_no_event_objs_smallsize) \
+                + "\n" + "|  " + str()
+    fig.text(0.2, 0.2,  obj_info, ha='left', va='top', fontsize=10, color='blue')
+    fig.savefig(savepath + "_noevent_obj")
     plt.close(fig)
 
 # save the picture shows that the interval hit time and size of each objs alloced from this malloc
@@ -382,9 +411,12 @@ def statistics(df_per_malloc, df_myaf, savepath):
             record_obj(obj_life_time, obj_size, obj_interval, obj_performance_without_lifetime, savepath, obj_addr, index)
         
         statistics_hits.append(len(obj_performance_without_lifetime))
-
+    
     # statistics some information
+    
+    # mask for objs which do not have any event
     mask = ~df_myaf["data_addr"].isin(malloc_objs_df["data_addr"])
+    # mask for objs' size bigger then 128k 
     mask_128ksize = df_myaf["size"] <= 128 * 1024
 
     intervals += df_myaf[mask]["generation"].to_numpy().tolist()
@@ -393,9 +425,11 @@ def statistics(df_per_malloc, df_myaf, savepath):
     obj_sizes_128kfilter = df_myaf[mask_128ksize]["size"].to_numpy().tolist()
     statistics_hits += [0] * len(df_myaf[mask])
     statistics_lifetime = df_myaf["generation"].to_numpy().tolist()
+    # objs have no event
+    no_event_objs = df_myaf[mask]
     
     record_internal(intervals, intervals_128kfilter, obj_sizes, obj_sizes_128kfilter, savepath)
-    record_objs(obj_sizes, statistics_hits, statistics_lifetime, savepath)
+    record_objs(obj_sizes, statistics_hits, statistics_lifetime, no_event_objs, savepath)
     
 
 def main():
