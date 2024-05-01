@@ -27,7 +27,7 @@ clear
 #include <sys/mman.h>
 #include <sys/syscall.h>
 #include <unistd.h>
-//#include <time.h>
+// #include <time.h>
 #include <sys/time.h>
 
 pthread_mutex_t malloc_mutex;
@@ -46,8 +46,14 @@ typedef struct head {
         // unsigned long pading[2];
         size_t size;        // the malloc size
         unsigned long flag; // to record whether this memory has been free
+        /**
+         * This data type is designed to ensure that the data following it will
+         * not be prematurely added to the cache line (64byte) along with the
+         * cache memory due to being written to the head before being accessed.
+         */
+        unsigned long pading[6];
 
-} Head; // (16 byte)
+} Head; // (64 byte)
 
 /*============================ tools =======================================
  * ==========================================================================*/
@@ -168,7 +174,8 @@ void print_num(long long int num) {
 */
 
 void print_info_newpool(pid_t pid, void* begin, void* end, void* malloc_addr) {
-    char end_s[30], begin_s[30], pid_s[10], malloc_addr_s[30], time_s[30], buffer[140];
+    char end_s[30], begin_s[30], pid_s[10], malloc_addr_s[30], time_s[30],
+        buffer[140];
     int endlen, beginlen, pidlen, maddrlen, timelen;
     endlen = addr_to_string(end, end_s);
     beginlen = addr_to_string(begin, begin_s);
@@ -179,7 +186,7 @@ void print_info_newpool(pid_t pid, void* begin, void* end, void* malloc_addr) {
     struct timespec ts;
     clock_gettime(CLOCK_MONOTONIC, &ts);
     unsigned long long time = ts.tv_sec * 1000000 + ts.tv_nsec / 1000;
-    */    
+    */
     struct timeval t;
     gettimeofday(&t, NULL);
     unsigned long long time = t.tv_sec * 1000000 + t.tv_usec;
@@ -274,7 +281,8 @@ void print_info_alloc(pid_t pid, size_t size, void* addr, void* malloc_addr) {
         big_alloc_flag = 0;
         return;
     }
-    char addr_s[30], pid_s[10], size_s[30], malloc_addr_s[30], time_s[30], buffer[140];
+    char addr_s[30], pid_s[10], size_s[30], malloc_addr_s[30], time_s[30],
+        buffer[140];
     int addrlen, pidlen, sizelen, maddrlen, timelen;
     addrlen = addr_to_string(addr, addr_s);
     pidlen = num_to_string(pid, pid_s);
@@ -288,7 +296,7 @@ void print_info_alloc(pid_t pid, size_t size, void* addr, void* malloc_addr) {
     struct timeval t;
     gettimeofday(&t, NULL);
     unsigned long long time = t.tv_sec * 1000000 + t.tv_usec;
-    
+
     timelen = num_to_string(time, time_s);
 
     int index = 0;
@@ -367,16 +375,16 @@ Mem_pool* pool_search(void* return_addr) {
     }
 
     ////write(2, "search\n", sizeof("search\n"));
-    
+
     for (long int i = *pool_counter - 1; i >= 0; i--) {
         if (pool_table[i]->return_addr == return_addr) {
             return pool_table[i];
         }
     }
-    
+
     /*
     long int left = 0;
-    long int right = *pool_counter; 
+    long int right = *pool_counter;
     long int index;
     while(1){
         index = (left + right) / 2;
@@ -457,7 +465,7 @@ Mem_pool* pool_insert(void* return_addr, Mem_pool* new_pool, size_t size) {
         // test
         if (*pool_counter + 1 >= MAX_QUANTITY) {
             int wsize = write(2, "exceed max number of memory pool\n",
-                  sizeof("exceed max number of memory pool\n"));
+                              sizeof("exceed max number of memory pool\n"));
         }
         assert(*pool_counter + 1 < MAX_QUANTITY);
 
@@ -609,9 +617,8 @@ void* malloc(size_t size) {
 
 void free(void* addr) {
     pthread_mutex_lock(&malloc_mutex);
-    
-    if (addr != 0)
-        print_info_free(getpid(), addr);
+
+    if (addr != 0) print_info_free(getpid(), addr);
 
     pthread_mutex_unlock(&malloc_mutex);
 
@@ -635,19 +642,17 @@ void* realloc(void* addr, size_t new_size) {
 
     pthread_mutex_lock(&malloc_mutex);
     if (new_size == 0) { // like free
-        //print_info_alloc(getpid(), ori_new_size, NULL, return_addr);
+        // print_info_alloc(getpid(), ori_new_size, NULL, return_addr);
         pthread_mutex_unlock(&malloc_mutex);
         return NULL;
-    }
-    else if (addr == NULL) { // like malloc
+    } else if (addr == NULL) { // like malloc
         void* return_value = pool_alloc(new_size, return_addr);
 
         print_info_alloc(getpid(), ori_new_size, return_value, return_addr);
         pthread_mutex_unlock(&malloc_mutex);
 
         return return_value;
-    } 
-    else { // realloc
+    } else { // realloc
         void* return_value = pool_realloc(new_size, addr, return_addr);
 
         print_info_alloc(getpid(), ori_new_size, return_value, return_addr);
