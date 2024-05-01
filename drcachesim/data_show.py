@@ -36,6 +36,7 @@ thread_flag = True
 picture_size = (10, 8)
 dpi = 100
 endtime = -1
+debug = True
 
 def DTW(df_per_malloc, savepath, malloc_info):
     global endtime
@@ -172,6 +173,9 @@ def record_objs(obj_sizes, statistics_hits, statistics_lifetime, no_event_objs, 
     plt.close(fig)
 
     # for objs don't have any event
+    if len(no_event_objs) == 0:
+        return
+    
     no_event_obj_lifetime = no_event_objs["generation"]
     no_event_obj_sizes = no_event_objs["size"]
     fig, axs = plt.subplots(1, 2, figsize=(14, 7), gridspec_kw={'bottom': 0.3, 'top': 0.9})
