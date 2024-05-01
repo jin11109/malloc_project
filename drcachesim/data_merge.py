@@ -379,7 +379,7 @@ def deal_with_files():
         pids[pid] = True
 
     for pid in pids:
-        hit_caller_addrs = np.array([])
+        hit_caller_addrs = []
         # export hit malloc object result
         if  scripts_result.get(pid) is not None:
             path = "./result/result" +  "_" + str(pid) + "/"
@@ -397,19 +397,20 @@ def deal_with_files():
                 print("export hit information result")
                 df_script.export(path + "chunk" + str(chunk_index) + ".csv", progress=True)
 
-                hit_caller_addrs = np.array(df_script["caller_addr"].tolist(), dtype=int)
-                
+                # record the mallocs which have event
+                hit_caller_addrs += df_script["caller_addr"].tolist()
+
                 del df_script
                 gc.collect()
 
                 chunk_index += 1
 
         # export malloc caller address not be sampled
-        if alloc_logs.get(pid) is not None and alloc_logs[pid].get("myaf"):
+        if alloc_logs.get(pid) is not None and alloc_logs[pid].get("myaf") is not None:
             df_myaf = vaex.from_csv(alloc_logs[pid]["myaf"], dtype=df_datatype)
 
             df_myaf = df_myaf.groupby('caller_addr', agg={'caller_total_alloc_size': vaex.agg.mean('caller_total_alloc_size')})
-            mask = ~df_myaf["caller_addr"].isin(hit_caller_addrs)
+            mask = ~df_myaf["caller_addr"].isin(list(set(hit_caller_addrs)))
             df_myaf = df_myaf[mask]
             df_myaf["caller_addr_str"] = df_myaf["caller_addr"].apply(to_hex)
 
