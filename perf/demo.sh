@@ -5,6 +5,12 @@ if [ $# == 0 ]; then
     exit 0
 fi
 
+# get target program paremeter
+target_program=""
+for ((i = 2; i <= $#; i++)); do
+    target_program="$target_program ${!i}"
+done
+
 # set enviroment
 echo -1 | sudo tee /proc/sys/kernel/perf_event_paranoid > /dev/null
 echo 0 | sudo tee /proc/sys/kernel/kptr_restrict > /dev/null
@@ -49,8 +55,7 @@ fi
 # create the shell with preload 
 echo "#!/bin/bash" > ./program.sh
 echo "export LD_PRELOAD=\$LD_PRELOAD:/lib/mymalloc.so" >> ./program.sh
-program_command="$* 2>> ./fifo"
-echo $program_command >> ./program.sh
+echo "$target_program 2>> ./fifo" >> ./program.sh
 chmod +x ./program.sh
 
 # create "myperf.data" for perf record
@@ -60,8 +65,20 @@ fi
 
 # start 
 python3 ./data_record.py &
-#perf record -e ibs_op/cnt_ctl=1/pp --count=50000 --timestamp --data -o ./myperf.data ./program.sh
-perf record -e ibs_op/l3missonly=1,cnt_ctl=1/pp --count=1000 --timestamp --data -o ./myperf.data ./program.sh
+
+# for amd cpu
+if [ "$1" = "amd" ]; then
+    #perf record -e ibs_op/cnt_ctl=1/pp --count=50000 --timestamp --data -o ./myperf.data ./program.sh
+    perf record -e ibs_op/l3missonly=1,cnt_ctl=1/pp --count=1000 --timestamp --data -o ./myperf.data ./program.sh
+# for intel cpu
+if [ "$1" = "inetl" ]; then
+    #perf record -e MEM_UOPS_RETIRED.ALL_STORES:ppp,MEM_UOPS_RETIRED.ALL_LOADS:ppp --count=20000 --timestamp --data -o ./myperf.data ./program.sh
+    perf record -e MEM_LOAD_UOPS_RETIRED.L3_MISS:ppp --count=500 --timestamp --data -o ./myperf.data ./program.sh
+else
+    echo "choose arch (amd/intel)"
+    exit 0
+fi
+
 perf script -F +addr,+time,+data_src --ns -i ./myperf.data >> ./fifo
 
 # wait for ./data_record.py
