@@ -2,6 +2,12 @@
 
 if [ $# == 0 ]; then
     echo "demo.sh : parameter error"
+    echo "usage : ./demo.sh [intel/amd] target_program"
+    exit 0
+fi
+
+if [ ! "$1" = "amd" ] && [ ! "$1" = "intel" ]; then
+    echo "choose arch (amd/intel)"
     exit 0
 fi
 
@@ -71,25 +77,23 @@ if [ "$1" = "amd" ]; then
     #perf record -e ibs_op/cnt_ctl=1/pp --count=50000 --timestamp --data -o ./myperf.data ./program.sh
     perf record -e ibs_op/l3missonly=1,cnt_ctl=1/pp --count=1000 --timestamp --data -o ./myperf.data ./program.sh
 # for intel cpu
-if [ "$1" = "inetl" ]; then
+elif [ "$1" = "intel" ]; then
     #perf record -e MEM_UOPS_RETIRED.ALL_STORES:ppp,MEM_UOPS_RETIRED.ALL_LOADS:ppp --count=20000 --timestamp --data -o ./myperf.data ./program.sh
     perf record -e MEM_LOAD_UOPS_RETIRED.L3_MISS:ppp --count=500 --timestamp --data -o ./myperf.data ./program.sh
 else
     echo "choose arch (amd/intel)"
     exit 0
 fi
-
-perf script -F +addr,+time,+data_src --ns -i ./myperf.data >> ./fifo
-
 # wait for ./data_record.py
 wait
 
-rm ./fifo
+# transfer myperf.data and split the result in small chunks
+python3 ./data_split.py &
+perf script -F +addr,+time,+data_src --ns -i ./myperf.data >> ./fifo
+# wait for ./data_split.py
+wait
 
-# set enviroment
-echo 4 | sudo tee /proc/sys/kernel/perf_event_paranoid > /dev/null
-echo 1 | sudo tee /proc/sys/kernel/kptr_restrict > /dev/null
-echo 2 | sudo tee /proc/sys/kernel/randomize_va_space > /dev/null
+rm ./fifo
 
 python3 ./data_merge.py
 cp ./data/myaf* ./result/
@@ -98,4 +102,7 @@ cp ./data/adjustment_time ./result/
 
 python3 ./data_show.py
 
-#rm -r ./data
+# set enviroment
+echo 4 | sudo tee /proc/sys/kernel/perf_event_paranoid > /dev/null
+echo 1 | sudo tee /proc/sys/kernel/kptr_restrict > /dev/null
+echo 2 | sudo tee /proc/sys/kernel/randomize_va_space > /dev/null

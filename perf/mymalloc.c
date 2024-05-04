@@ -44,8 +44,14 @@ typedef struct head {
         // unsigned long pading[2];
         size_t size;        // the malloc size
         unsigned long flag; // to record whether this memory has been free
+         /**
+         * This data type is designed to ensure that the data following it will
+         * not be prematurely added to the cache line (64byte) along with the
+         * cache memory due to being written to the head before being accessed.
+         */
+        unsigned long pading[6];
 
-} Head; // (16 byte)
+} Head; // (64 byte)
 
 /*============================ tools =======================================
  * ==========================================================================*/
