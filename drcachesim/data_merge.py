@@ -175,6 +175,7 @@ def deal_with_files():
         # for every chunks, apply a new column "pool begin" as inner join key
         path = "./data/script_with_poolkey_" + str(pid) + "/"
         os.mkdir(path)
+        dir_flag = True
         chunk_index = 0
         scripts_with_poolkey[pid] = []
         for chunk in scripts[pid]:
@@ -183,13 +184,14 @@ def deal_with_files():
             df_script["pool_begin"] = df_script["hit_addr"].apply(apply_join_key).evaluate()
             mask = df_script["pool_begin"] != -1
             df_script = df_script[mask]
-            print("export script with key " + str(pid))
+            print("export chunk in script with pool key " + str(pid))
             
             if len(df_script) == 0:
                 #del df_joined[pid]
-                print(str(pid) + " script didn't hit pool")
+                print(str(pid) + "this chunk in script didn't hit pool")
                 continue
             
+            dir_flag = False
             chunk_path = path + "chunk" + str(chunk_index) + ".csv"
             df_script.export(chunk_path, progress=True)
             
@@ -198,9 +200,14 @@ def deal_with_files():
             scripts_with_poolkey[pid].append(chunk_path)
             chunk_index += 1
 
+        # delete the dir without any chunks inside
+        if dir_flag:
+            os.rmdir(path)
+            del scripts_with_poolkey[pid]
+
         # for alloc log files, apply a same new column "pool begin" as inner join key
         df_myaf["pool_begin"] = df_myaf["data_addr"].apply(apply_join_key).evaluate()
-        print("export myaf with key " + str(pid))
+        print("export myaf with pool key " + str(pid))
         df_myaf.export("./data/myaf_" + str(pid) + ".csv", progress=True)
         del df_myaf
         gc.collect()
@@ -219,6 +226,7 @@ def deal_with_files():
         # for every chunk, insert datakey
         path = "./data/script_with_datakey_" + str(pid) + "/"
         chunk_index = 0
+        dir_flag = True
         scripts_result[pid] = []
         os.mkdir(path)
         for chunk in scripts_with_poolkey[pid]:
@@ -324,6 +332,7 @@ def deal_with_files():
                 del df_script
                 continue
             
+            dir_flag = False
             result_path = path + "chunk" + str(chunk_index) + ".csv"
             df_script.export(result_path, progress=True)
             del df_script
@@ -332,6 +341,11 @@ def deal_with_files():
             #df_joined[pid] = vaex.from_csv("./data/join_" + str(pid) + ".csv", dtype=df_datatype)
 
             chunk_index += 1
+
+        # delete the dir without any chunks inside
+        if dir_flag:
+            os.rmdir(path)
+            del scripts_result[pid]
 
     # add some information
     for pid in scripts_result:
