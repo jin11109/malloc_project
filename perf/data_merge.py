@@ -431,7 +431,7 @@ def deal_with_files():
             export_columns = ["caller_addr", "caller_addr_str", "caller_total_alloc_size"]
             df_myaf = df_myaf[export_columns]
             print("export malloc caller address not be sampled")
-            df_myaf.export("./result/result_not_be_sampled" +  "_" + str(pid) + ".csv", progress=True)
+            df_myaf.export("./result/result_not_be_sampled" +  "_" + str(pid) + ".csv")
 
             del df_myaf
             gc.collect()
