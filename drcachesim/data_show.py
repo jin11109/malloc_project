@@ -131,7 +131,7 @@ def DTW(df_per_malloc, savepath, malloc_info):
     print("\n\n\n")
 
 # save the picture shows that the count of hits and size of all objs alloced from this malloc
-def record_objs(obj_sizes, statistics_hits, statistics_lifetime, no_event_objs, savepath):
+def record_objs(obj_sizes, statistics_hits, statistics_lifetime, no_event_objs, filter_flag, savepath, filter_save_path):
     number_of_short_lifetime = 0
     number_of_total_objs = len(obj_sizes)
     number_of_zreo_hit = 0 
@@ -170,6 +170,8 @@ def record_objs(obj_sizes, statistics_hits, statistics_lifetime, no_event_objs, 
                 + "\n" + "|  " + str()
     fig.text(0.2, 0.2,  obj_info, ha='left', va='top', fontsize=10, color='blue')
     fig.savefig(savepath + "_all_obj")
+    if filter_flag:
+        fig.savefig(filter_save_path + "_all_obj")
     plt.close(fig)
 
     # for objs don't have any event
@@ -202,6 +204,8 @@ def record_objs(obj_sizes, statistics_hits, statistics_lifetime, no_event_objs, 
                 + "\n" + "|  " + str()
     fig.text(0.2, 0.2,  obj_info, ha='left', va='top', fontsize=10, color='blue')
     fig.savefig(savepath + "_noevent_obj")
+    if filter_flag:
+        fig.savefig(filter_save_path + "_noevent_obj")
     plt.close(fig)
 
 # save the picture shows that the interval hit time and size of each objs alloced from this malloc
@@ -233,7 +237,7 @@ def record_obj(obj_life_time, obj_size, obj_interval, obj_performance, savepath,
     plt.close(fig)
 
 # save the picture shows that the interval hit time of all objs alloced from this malloc
-def record_internal(intervals, intervals_128kfilter, obj_sizes, obj_sizes_128kfilter, savepath):
+def record_internal(intervals, intervals_128kfilter, obj_sizes, obj_sizes_128kfilter, filter_flag, savepath, filter_save_path):
     #save picture
     fig, axs = plt.subplots(1, 2, figsize=(14, 5), gridspec_kw={'bottom': 0.3, 'top': 0.9})
     sns.histplot(x=intervals, ax=axs[0], bins=100)
@@ -263,10 +267,12 @@ def record_internal(intervals, intervals_128kfilter, obj_sizes, obj_sizes_128kfi
                 + "\n" + "|  " + str()
     fig.text(0.2, 0.2,  obj_info, ha='left', va='top', fontsize=10, color='blue')
     fig.savefig(savepath + "_all_interval")
+    if filter_flag:
+        fig.savefig(filter_save_path + "_all_interval")
     plt.close(fig)
 
 # save the picture shows that absolute/relative hit time and lifetime of all objs alloed from this malloc
-def record_malloc(pid, df_abs, df_lifetime, df_rel, per_caller_info, all_hits_count, number_of_unsampled_malloc, number_of_sampled_malloc, savepath):
+def record_malloc(pid, df_abs, df_lifetime, df_rel, per_caller_info, all_hits_count, number_of_unsampled_malloc, number_of_sampled_malloc, filter_flag, savepath, filter_save_path):
     fig, axs = plt.subplots(1, 3, figsize=(14, 5), gridspec_kw={'bottom': 0.3, 'top': 0.9}) # bottom and top is percentage 
     plt.subplots_adjust(wspace=0.3)
     # absolute time
@@ -304,6 +310,8 @@ def record_malloc(pid, df_abs, df_lifetime, df_rel, per_caller_info, all_hits_co
     fig.text(0.6, 0.2, other_info, ha='left', va='top', fontsize=10, color='blue')
 
     plt.savefig(savepath)
+    if filter_flag:
+        plt.savefig(filter_save_path)
     plt.close(fig)
 
 # save the picture shows that the lifetime and size of each objs alloced from this malloc
@@ -350,7 +358,7 @@ def record_size_with_no_event(pid, df_not):
     plt.savefig("./result_picture/" + str(pid) + "_no_event_size" + ".png")
 
 # statistics interval hit time and some information, then call other funcs to save pictures
-def statistics(df_per_malloc, df_myaf, savepath):
+def statistics(df_per_malloc, df_myaf, filter_flag, savepath, filter_save_path):
     global endtime
     #print(df_per_malloc)
     #print("df myaf")
@@ -411,7 +419,8 @@ def statistics(df_per_malloc, df_myaf, savepath):
             last_time = hit_time
 
         # record other information
-        if len(obj_performance) > 100:
+        #if len(obj_performance) > 100:
+        if False:
             record_obj(obj_life_time, obj_size, obj_interval, obj_performance_without_lifetime, savepath, obj_addr, index)
         
         statistics_hits.append(len(obj_performance_without_lifetime))
@@ -432,8 +441,8 @@ def statistics(df_per_malloc, df_myaf, savepath):
     # objs have no event
     no_event_objs = df_myaf[mask]
     
-    record_internal(intervals, intervals_128kfilter, obj_sizes, obj_sizes_128kfilter, savepath)
-    record_objs(obj_sizes, statistics_hits, statistics_lifetime, no_event_objs, savepath)
+    record_internal(intervals, intervals_128kfilter, obj_sizes, obj_sizes_128kfilter, filter_flag, savepath, filter_save_path)
+    record_objs(obj_sizes, statistics_hits, statistics_lifetime, no_event_objs, filter_flag, savepath, filter_save_path)
     
 
 def main():
@@ -473,7 +482,7 @@ def main():
         # then we output some picture with the information for these mallocs and these mallocs'obj  
         if fileresult_notsampled_names.get(pid) is not None:
             # put result picture into this dir
-            dir_path = "./result_picture/" + "noevent" + str(pid)
+            dir_path = "./result_picture/" + str(pid) + "noevent"
             if not Path(dir_path).exists():
                 os.makedirs(dir_path)
             
@@ -516,9 +525,14 @@ def main():
 
             # group the data by caller addr and count some information 
             indicate = df.groupby("caller_addr_str", as_index=False).aggregate({
-                "size": ["count"], 
-                "caller_objects_num": ["mean"], 
-                "caller_total_alloc_size": ["mean"]
+                # just use a arbitrary column to count how many rows we group 
+                "size": ["count"],
+                # number of how many objs
+                "caller_objects_num": ["mean"],
+                #  total size alloced by every malloc
+                "caller_total_alloc_size": ["mean"],
+                # max obj lifetime
+                "interval_time": ["max"]
             })
             indicate.columns = indicate.columns.map(''.join)
             
@@ -531,7 +545,10 @@ def main():
             dir_path = "./result_picture/" + str(pid)
             if not Path(dir_path).exists():
                 os.makedirs(dir_path)
-            
+            filter_dir_path = "./result_picture/" + str(pid) + "filter"
+            if not Path(filter_dir_path).exists():
+                os.makedirs(filter_dir_path)
+
             # make pictures with every malloc address 
             for i in range(number_of_sampled_malloc):
                 per_caller_info = indicate.iloc[i:i + 1, :]
@@ -540,12 +557,17 @@ def main():
                 mask = df["interval_time"] > 3
                 mask2 = df["caller_addr_str"].isin(per_caller_info["caller_addr_str"])
                 mask3 = df_myaf["caller_addr"].isin([int(per_caller_info["caller_addr_str"].to_string(index=False), 16)])
+                # for filter 
+                filter_flag = float(per_caller_info["interval_timemax"].to_string(index=False)) > 3 \
+                              and float(per_caller_info["caller_objects_nummean"].to_string(index=False)) > 5
 
                 picture_name = re.sub(r'\s+', '_', per_caller_info["caller_addr_str"].to_string())
                 savepath = dir_path + "/" + picture_name
-                record_malloc(pid, df[mask2], df_myaf[mask3], df[mask & mask2], per_caller_info, all_hits_count, number_of_unsampled_malloc, number_of_sampled_malloc, savepath)
+                filter_savepath = filter_dir_path + "/" + picture_name
+                record_malloc(pid, df[mask2], df_myaf[mask3], df[mask & mask2], per_caller_info, all_hits_count, number_of_unsampled_malloc, 
+                              number_of_sampled_malloc, filter_flag, savepath, filter_savepath)
 
-                statistics(df[mask2], df_myaf[mask3], savepath)  
+                statistics(df[mask2], df_myaf[mask3], filter_flag, savepath, filter_savepath)  
                 
                 # calculate DTW
                 #DTW(df[mask2], dir_path + "/" + picture_name, per_caller_info) 
