@@ -37,6 +37,7 @@ picture_size = (10, 8)
 dpi = 100
 endtime = -1
 debug = True
+lifetime_threshold = 3
 
 def DTW(df_per_malloc, savepath, malloc_info):
     global endtime
@@ -132,6 +133,8 @@ def DTW(df_per_malloc, savepath, malloc_info):
 
 # save the picture shows that the count of hits and size of all objs alloced from this malloc
 def record_objs(obj_sizes, statistics_hits, statistics_lifetime, no_event_objs, filter_flag, savepath, filter_save_path):
+    global lifetime_threshold
+
     number_of_short_lifetime = 0
     number_of_total_objs = len(obj_sizes)
     number_of_zreo_hit = 0 
@@ -144,7 +147,7 @@ def record_objs(obj_sizes, statistics_hits, statistics_lifetime, no_event_objs, 
             number_of_hit_between_1_10 += 1
     
     for i in statistics_lifetime:
-        if i < 5:
+        if i < lifetime_threshold:
             number_of_short_lifetime += 1
         
     
@@ -162,12 +165,12 @@ def record_objs(obj_sizes, statistics_hits, statistics_lifetime, no_event_objs, 
     
     obj_info = "malloc objects information" \
                 + "\n" + "|  Number of tatal objects : " + str(number_of_total_objs) \
-                + "\n" + "|  Number of objects with lifetime < 5 : " +  str(number_of_short_lifetime)\
-                + "\n" + "|  Number of Objects with lifetime >= 5 : " + str(number_of_total_objs - number_of_short_lifetime) \
+                + "\n" + f"|  Number of objects with lifetime < {lifetime_threshold} : " +  str(number_of_short_lifetime)\
+                + "\n" + f"|  Number of Objects with lifetime >= {lifetime_threshold} : " + str(number_of_total_objs - number_of_short_lifetime) \
                 + "\n" + "|  Number of objects with times of hit is 0 : " + str(number_of_zreo_hit) \
                 + "\n" + "|  Number of objects with times of hit is between 1~10 : " + str(number_of_hit_between_1_10) \
                 + "\n" + "|  Number of objects with times of hit is > 10 : " + str(number_of_total_objs - number_of_hit_between_1_10 - number_of_zreo_hit) \
-                + "\n" + "|  " + str()
+                + "\n" + f"|  Porpotion of long lifetime objects (lifetime >= {lifetime_threshold}): " + str((1 - number_of_short_lifetime / number_of_total_objs) * 100) + "%"
     fig.text(0.2, 0.2,  obj_info, ha='left', va='top', fontsize=10, color='blue')
     fig.savefig(savepath + "_all_obj")
     if filter_flag:
@@ -193,12 +196,12 @@ def record_objs(obj_sizes, statistics_hits, statistics_lifetime, no_event_objs, 
     axs[1].set_yscale('log')
     
     number_of_total_no_event_objs = len(no_event_objs)
-    number_of_no_event_objs_shortlifetime = len(no_event_objs[no_event_objs["generation"] < 5])
+    number_of_no_event_objs_shortlifetime = len(no_event_objs[no_event_objs["generation"] < lifetime_threshold])
     number_of_no_event_objs_smallsize = len(no_event_objs[no_event_objs["size"] < 64])
     obj_info = "malloc objects information" \
                 + "\n" + "|  Number of tatal no event objects : " + str(number_of_total_no_event_objs) \
-                + "\n" + "|  Number of no event objects with lifetime < 5 : " +  str(number_of_no_event_objs_shortlifetime)\
-                + "\n" + "|  Number of no event Objects with lifetime >= 5 : " + str(number_of_total_no_event_objs - number_of_no_event_objs_shortlifetime) \
+                + "\n" + f"|  Number of no event objects with lifetime < {lifetime_threshold} : " +  str(number_of_no_event_objs_shortlifetime)\
+                + "\n" + f"|  Number of no event Objects with lifetime >= {lifetime_threshold} : " + str(number_of_total_no_event_objs - number_of_no_event_objs_shortlifetime) \
                 + "\n" + "|  Number of no event objects with size < 64 : " + str(number_of_no_event_objs_smallsize) \
                 + "\n" + "|  Number of no event objects with size >= 64 : " + str(number_of_total_no_event_objs - number_of_no_event_objs_smallsize) \
                 + "\n" + "|  " + str()
@@ -272,7 +275,9 @@ def record_internal(intervals, intervals_128kfilter, obj_sizes, obj_sizes_128kfi
     plt.close(fig)
 
 # save the picture shows that absolute/relative hit time and lifetime of all objs alloed from this malloc
-def record_malloc(pid, df_abs, df_lifetime, df_rel, per_caller_info, all_hits_count, number_of_unsampled_malloc, number_of_sampled_malloc, filter_flag, savepath, filter_save_path):
+def record_malloc(pid, df_abs, df_lifetime, df_rel, per_caller_info, all_hits_count, number_of_unsampled_malloc, number_of_sampled_malloc, long_lifetime_propotion, filter_flag, savepath, filter_save_path):
+    global lifetime_threshold
+    
     fig, axs = plt.subplots(1, 3, figsize=(14, 5), gridspec_kw={'bottom': 0.3, 'top': 0.9}) # bottom and top is percentage 
     plt.subplots_adjust(wspace=0.3)
     # absolute time
@@ -300,7 +305,8 @@ def record_malloc(pid, df_abs, df_lifetime, df_rel, per_caller_info, all_hits_co
         + "\n" + "|  malloc address : " + per_caller_info["caller_addr_str"].to_string(index=False) \
         + "\n" + "|  Sampling Hits Count of malloc Objects : " + per_caller_info["sizecount"].to_string(index=False) \
         + "\n" + "|  Size of All Allocated Spaces by this malloc: " + per_caller_info["caller_total_alloc_sizemean"].to_string(index=False) \
-        + "\n" + "|  Number of Objects Allocated by this malloc : " + per_caller_info["caller_objects_nummean"].to_string(index=False)
+        + "\n" + "|  Number of Objects Allocated by this malloc : " + per_caller_info["caller_objects_nummean"].to_string(index=False) \
+        + "\n" + f"|  Propotion of Long Lifetime Objects (lifetime >= {lifetime_threshold}) : " + str(long_lifetime_propotion * 100) + "%"
     other_info = "Information about this experiment" \
         + "\n" + "|  All Sampling Hits Count of malloc Objects for PID " + str(pid) + " : " + str(all_hits_count) \
         + "\n" + "|  Count of Unsampled mallocs for PID " + str(pid) + " : " + str(number_of_unsampled_malloc)\
@@ -316,10 +322,11 @@ def record_malloc(pid, df_abs, df_lifetime, df_rel, per_caller_info, all_hits_co
 
 # save the picture shows that the lifetime and size of each objs alloced from this malloc
 def record_objs_with_no_event(df_myaf, savepath):
+    global lifetime_threshold
 
     number_of_total_objs = len(df_myaf)
     number_of_small_size = len(df_myaf[df_myaf["size"] <= 64])
-    number_of_short_lifetime = len(df_myaf[df_myaf["generation"] < 5])
+    number_of_short_lifetime = len(df_myaf[df_myaf["generation"] < lifetime_threshold])
 
     # print(number_of_short_lifetime, number_of_small_size, number_of_total_objs)
 
@@ -338,8 +345,8 @@ def record_objs_with_no_event(df_myaf, savepath):
     obj_info = "malloc objects information" \
                 + "\n" + "|  Size of tatal objects : " + str(df_myaf["size"].sum()) \
                 + "\n" + "|  Number of tatal objects : " + str(number_of_total_objs) \
-                + "\n" + "|  Number of objects with lifetime < 5 : " +  str(number_of_short_lifetime)\
-                + "\n" + "|  Number of Objects with lifetime >= 5 : " + str(number_of_total_objs - number_of_short_lifetime) \
+                + "\n" + f"|  Number of objects with lifetime < {lifetime_threshold} : " +  str(number_of_short_lifetime)\
+                + "\n" + f"|  Number of Objects with lifetime >= {lifetime_threshold} : " + str(number_of_total_objs - number_of_short_lifetime) \
                 + "\n" + "|  Number of objects with size <= 64 : " + str(number_of_small_size) \
                 + "\n" + "|  " + str()
     fig.text(0.2, 0.2,  obj_info, ha='left', va='top', fontsize=10, color='blue')
@@ -359,7 +366,7 @@ def record_size_with_no_event(pid, df_not):
 
 # statistics interval hit time and some information, then call other funcs to save pictures
 def statistics(df_per_malloc, df_myaf, filter_flag, savepath, filter_save_path):
-    global endtime
+    global endtime, lifetime_threshold
     #print(df_per_malloc)
     #print("df myaf")
     #print(df_myaf)
@@ -419,8 +426,7 @@ def statistics(df_per_malloc, df_myaf, filter_flag, savepath, filter_save_path):
             last_time = hit_time
 
         # record other information
-        #if len(obj_performance) > 100:
-        if False:
+        if len(obj_performance) > 100:
             record_obj(obj_life_time, obj_size, obj_interval, obj_performance_without_lifetime, savepath, obj_addr, index)
         
         statistics_hits.append(len(obj_performance_without_lifetime))
@@ -446,7 +452,7 @@ def statistics(df_per_malloc, df_myaf, filter_flag, savepath, filter_save_path):
     
 
 def main():
-    global endtime
+    global endtime, lifetime_threshold
 
     fileresult_names = {}
     fileresult_notsampled_names = {}
@@ -554,18 +560,28 @@ def main():
                 per_caller_info = indicate.iloc[i:i + 1, :]
                 print("\nmalloc " + str(i) + "\n", per_caller_info)
     
-                mask = df["interval_time"] > 3
+                mask = df["interval_time"] > lifetime_threshold
                 mask2 = df["caller_addr_str"].isin(per_caller_info["caller_addr_str"])
                 mask3 = df_myaf["caller_addr"].isin([int(per_caller_info["caller_addr_str"].to_string(index=False), 16)])
+                mask4 = df_myaf[mask3]["generation"] >= lifetime_threshold
+                
                 # for filter 
-                filter_flag = float(per_caller_info["interval_timemax"].to_string(index=False)) > 3 \
-                              and float(per_caller_info["caller_objects_nummean"].to_string(index=False)) > 5
+                # only consider the malloc whitch number of objs is more than 5
+                condition1 = float(per_caller_info["caller_objects_nummean"].to_string(index=False)) > 5
+                # only consider the malloc whitch max lifetime of objs in this malloc is >= 100 second  
+                condition2 = float(per_caller_info["interval_timemax"].to_string(index=False)) >= lifetime_threshold
+                # only consider the malloc whitch propotion of long lifetime objs bigger than 50% 
+                long_lifetime_propotion = len(df_myaf[mask3 & mask4]) / float(per_caller_info["caller_objects_nummean"].to_string(index=False))
+                condition3 = long_lifetime_propotion > 0.5
+                filter_flag = condition1 and condition2 and condition3
 
+                # get savepath
                 picture_name = re.sub(r'\s+', '_', per_caller_info["caller_addr_str"].to_string())
                 savepath = dir_path + "/" + picture_name
                 filter_savepath = filter_dir_path + "/" + picture_name
+                
                 record_malloc(pid, df[mask2], df_myaf[mask3], df[mask & mask2], per_caller_info, all_hits_count, number_of_unsampled_malloc, 
-                              number_of_sampled_malloc, filter_flag, savepath, filter_savepath)
+                              number_of_sampled_malloc, long_lifetime_propotion, filter_flag, savepath, filter_savepath)
 
                 statistics(df[mask2], df_myaf[mask3], filter_flag, savepath, filter_savepath)  
                 
