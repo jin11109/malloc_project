@@ -37,6 +37,7 @@ int main(int argc, char *argv[]) {
         }
         
         setenv("LD_PRELOAD", "/lib/mymalloc.so", 1);
+        //setenv("LD_LIBRARY_PATH", "./test/test_dynamic_link", 1);     
         execvp(argv[1], &argv[1]);
 
         /*
