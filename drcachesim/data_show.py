@@ -212,7 +212,7 @@ def record_objs(obj_sizes, statistics_hits, statistics_lifetime, no_event_objs, 
     plt.close(fig)
 
 # save the picture shows that the interval hit time and size of each objs alloced from this malloc
-def record_obj(obj_life_time, obj_size, obj_interval, obj_performance, savepath, obj_addr, index):
+def record_obj(obj_life_time, obj_size, obj_interval, obj_performance, obj_alloctime, obj_freetime, savepath, obj_addr, index):
     
     #save picture
     fig, axs = plt.subplots(1, 2, figsize=(14, 5), gridspec_kw={'bottom': 0.3, 'top': 0.9})
@@ -231,12 +231,15 @@ def record_obj(obj_life_time, obj_size, obj_interval, obj_performance, savepath,
                 + "\n" + "|  obj addr : " + obj_addr \
                 + "\n" + "|  object size : " +  str(obj_size)\
                 + "\n" + "|  life time : " + str(obj_life_time) \
-                + "\n" + "|  " + str() \
-                + "\n" + "|  " + str() \
-                + "\n" + "|  " + str() \
+                + "\n" + "|  total cachemisses : " + str(len(obj_performance)) \
+                + "\n" + "|  alloc time : " + str(obj_alloctime) \
+                + "\n" + "|  free time : " + str(obj_freetime) \
                 + "\n" + "|  " + str()
     fig.text(0.2, 0.2,  obj_info, ha='left', va='top', fontsize=10, color='blue')
-    fig.savefig(savepath + "_obj_" + str(index))
+    fig.savefig(savepath + "obj_" + str(index))
+    if not Path(savepath + "size" + str(obj_size)).exists():
+        os.makedirs(savepath + "size" + str(obj_size))
+    fig.savefig(savepath + "size" + str(obj_size) + "/" + "obj_" + str(index))
     plt.close(fig)
 
 # save the picture shows that the interval hit time of all objs alloced from this malloc
@@ -383,6 +386,9 @@ def statistics(df_per_malloc, df_myaf, filter_flag, savepath, filter_save_path):
     statistics_hits = []
     statistics_lifetime = []
 
+    dir_flag = True
+    if not Path(savepath + "_obj").exists():
+        os.makedirs(savepath + "_obj")
     # for every objects calculate the interval hit time
     for index in malloc_objs:
         # record the object hit interval
@@ -400,6 +406,8 @@ def statistics(df_per_malloc, df_myaf, filter_flag, savepath, filter_save_path):
         obj_performance_without_lifetime = obj_performance
         obj_performance.append(obj_life_time)
         obj_addr = hex(int(df_per_malloc[mask]["data_addr"].iloc[0: 1].to_string(index = False), 10))
+        obj_alloctime = float(df_per_malloc[mask]["alloc_time"].iloc[0: 1].to_string(index = False))
+        obj_freetime = float(df_per_malloc[mask]["free_time"].iloc[0: 1].to_string(index = False))
         
         # insert size
         obj_sizes.append(obj_size)
@@ -426,11 +434,15 @@ def statistics(df_per_malloc, df_myaf, filter_flag, savepath, filter_save_path):
             last_time = hit_time
 
         # record other information
-        if len(obj_performance) > 100:
-            record_obj(obj_life_time, obj_size, obj_interval, obj_performance_without_lifetime, savepath, obj_addr, index)
-        
+        if len(obj_performance) > 100 or (filter_flag and len(malloc_objs) < 1000):
+            record_obj(obj_life_time, obj_size, obj_interval, obj_performance_without_lifetime, obj_alloctime, obj_freetime, savepath + "_obj/", obj_addr, index)
+            dir_flag = False
+
         statistics_hits.append(len(obj_performance_without_lifetime))
-    
+
+    if dir_flag:
+        os.rmdir(savepath + "_obj")
+
     # statistics some information
     
     # mask for objs which do not have any event
