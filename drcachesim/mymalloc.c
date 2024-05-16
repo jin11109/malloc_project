@@ -276,7 +276,7 @@ void print_info_free(pid_t pid, void* addr) {
     int wsize = write(2, buffer, index);
 }
 
-void print_info_alloc(pid_t pid, size_t size, void* addr, void* malloc_addr) {
+void print_info_alloc(pid_t pid, size_t size, void* addr, void* malloc_addr, char alloc_type) {
     if (big_alloc_flag) {
         big_alloc_flag = 0;
         return;
@@ -333,6 +333,11 @@ void print_info_alloc(pid_t pid, size_t size, void* addr, void* malloc_addr) {
         buffer[index + i] = time_s[i];
     }
     index += timelen;
+    buffer[index++] = ' ';
+
+    // record is malloc or realloc or calloc
+    buffer[index++] = alloc_type;
+
     buffer[index++] = '\n';
 
     int wsize = write(2, buffer, index);
@@ -608,7 +613,7 @@ void* malloc(size_t size) {
         0)); // value of 0 yields return address of the current function
     void* addr = pool_alloc(size, return_addr);
 
-    print_info_alloc(getpid(), ori_size, addr, return_addr);
+    print_info_alloc(getpid(), ori_size, addr, return_addr, 'm');
 
     pthread_mutex_unlock(&malloc_mutex);
 
@@ -648,14 +653,14 @@ void* realloc(void* addr, size_t new_size) {
     } else if (addr == NULL) { // like malloc
         void* return_value = pool_alloc(new_size, return_addr);
 
-        print_info_alloc(getpid(), ori_new_size, return_value, return_addr);
+        print_info_alloc(getpid(), ori_new_size, return_value, return_addr, 'r');
         pthread_mutex_unlock(&malloc_mutex);
 
         return return_value;
     } else { // realloc
         void* return_value = pool_realloc(new_size, addr, return_addr);
 
-        print_info_alloc(getpid(), ori_new_size, return_value, return_addr);
+        print_info_alloc(getpid(), ori_new_size, return_value, return_addr, 'r');
         pthread_mutex_unlock(&malloc_mutex);
         return return_value;
     }
@@ -681,7 +686,7 @@ void* calloc(size_t count, size_t size) {
 
     memset(addr, 0, new_size);
 
-    print_info_alloc(getpid(), ori_size, addr, return_addr);
+    print_info_alloc(getpid(), ori_size, addr, return_addr, 'c');
 
     pthread_mutex_unlock(&malloc_mutex);
 

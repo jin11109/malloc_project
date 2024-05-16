@@ -29,7 +29,8 @@ dtype = {
     "caller_total_alloc_size" : int,
     "data_addr_end" : int,
     "pool_begin" : int,
-    "generation" : float
+    "generation" : float,
+    "alloc_type" : str
 }
 
 thread_flag = True
@@ -38,6 +39,11 @@ dpi = 100
 endtime = -1
 debug = True
 lifetime_threshold = 100
+alloc_type_mapping = {
+    "m" : "malloc",
+    "r" : "realloc",
+    "c" : "calloc"
+}
 
 def DTW(df_per_malloc, savepath, malloc_info):
     global endtime
@@ -215,7 +221,7 @@ def record_objs(obj_sizes, statistics_hits, statistics_lifetime, no_event_objs, 
 def record_obj(obj_life_time, obj_size, obj_interval, obj_performance, obj_alloctime, obj_freetime, savepath, obj_addr, index):
     
     #save picture
-    fig, axs = plt.subplots(1, 2, figsize=(14, 5), gridspec_kw={'bottom': 0.3, 'top': 0.9})
+    fig, axs = plt.subplots(1, 2, figsize=(14, 7), gridspec_kw={'bottom': 0.3, 'top': 0.9})
     sns.histplot(x=obj_performance, ax=axs[0], bins=100)
     axs[0].set_title('Hits Count for Malloc Object')
     axs[0].set_ylabel('count')
@@ -279,7 +285,7 @@ def record_internal(intervals, intervals_128kfilter, obj_sizes, obj_sizes_128kfi
 
 # save the picture shows that absolute/relative hit time and lifetime of all objs alloed from this malloc
 def record_malloc(pid, df_abs, df_lifetime, df_rel, per_caller_info, all_hits_count, number_of_unsampled_malloc, number_of_sampled_malloc, long_lifetime_propotion, filter_flag, savepath, filter_save_path):
-    global lifetime_threshold
+    global lifetime_threshold, alloc_type_mapping
     
     fig, axs = plt.subplots(1, 3, figsize=(14, 5), gridspec_kw={'bottom': 0.3, 'top': 0.9}) # bottom and top is percentage 
     plt.subplots_adjust(wspace=0.3)
@@ -304,7 +310,8 @@ def record_malloc(pid, df_abs, df_lifetime, df_rel, per_caller_info, all_hits_co
     #axs[1].set_xlim(-3, 103)
     
     # add some information to picture
-    malloc_info = "malloc information" \
+    alloc_type = alloc_type_mapping[df_lifetime["alloc_type"].iloc[0]]
+    malloc_info = "alloc information (type "+  alloc_type + ")" \
         + "\n" + "|  malloc address : " + per_caller_info["caller_addr_str"].to_string(index=False) \
         + "\n" + "|  Sampling Hits Count of malloc Objects : " + per_caller_info["sizecount"].to_string(index=False) \
         + "\n" + "|  Size of All Allocated Spaces by this malloc: " + per_caller_info["caller_total_alloc_sizemean"].to_string(index=False) \
@@ -547,7 +554,7 @@ def main():
                 "size": ["count"],
                 # number of how many objs
                 "caller_objects_num": ["mean"],
-                #  total size alloced by every malloc
+                # total size alloced by every malloc
                 "caller_total_alloc_size": ["mean"],
                 # max obj lifetime
                 "interval_time": ["max"]

@@ -114,7 +114,8 @@ def deal_with_files():
         "data_addr_end" : "int64",
         "caller_objects_num" : "int32",
         "caller_total_alloc_size" : "int64",
-        "generation" : "float64"
+        "generation" : "float64",
+        "alloc_type" : "str"
     }
 
     # open and initialize malloc obj files

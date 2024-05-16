@@ -69,14 +69,14 @@ def capture_data():
             if flag.get(info[0] + info[1]) is None:
                 flag[info[0] + info[1]] = True
                 if info[0] == "mya":
-                    write_data(["size", "data_addr", "caller_addr", "alloc_time"], filename)
+                    write_data(["size", "data_addr", "caller_addr", "alloc_time", "alloc_type"], filename)
                 elif info[0] == "myf":
                     write_data(["data_addr", "free_time"], filename)
                 elif info[0] == "myi":
                     write_data(["begin", "end", "caller_addr"], filename)
 
             if info[0] == "mya":
-                write_data([int(info[2], 10), int(info[3], 16), int(info[4], 16), int(info[5], 10) / 1000000 - start_time], filename)
+                write_data([int(info[2], 10), int(info[3], 16), int(info[4], 16), int(info[5], 10) / 1000000 - start_time, info[6]], filename)
             elif info[0] == "myf":
                 write_data([int(info[2], 16), int(info[3], 10) / 1000000 - start_time], filename)
             elif info[0] == "myi":
