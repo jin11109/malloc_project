@@ -44,6 +44,8 @@ alloc_type_mapping = {
     "r" : "realloc",
     "c" : "calloc"
 }
+event_moment = []
+
 
 def DTW(df_per_malloc, savepath, malloc_info):
     global endtime
@@ -283,6 +285,37 @@ def record_internal(intervals, intervals_128kfilter, obj_sizes, obj_sizes_128kfi
         fig.savefig(filter_save_path + "_all_interval")
     plt.close(fig)
 
+# save the picture shows that the real hit itme of all objs alloced from this malloc,
+# and if there is a time of important event we already recorded in ./event_moment.txt,
+# highlight these time to the realtime picture
+def record_malloc_with_realtime(df, filter_flag, savepath, filter_save_path):
+    global event_moment, endtime
+
+    # create interval of hisplot bins
+    bin_edges = np.arange(0, endtime, endtime / 101)
+    bin_edges[0] -= 1000
+    bin_edges[-1] += 1000
+    # create x-axis to display graph
+    x_axis = bin_edges[0 : -1].copy()
+    x_axis[0] = 0
+
+    fig, axs = plt.subplots(1, 2, figsize=(14, 5), gridspec_kw={'bottom': 0.3, 'top': 0.9}) # bottom and top is percentage 
+    plt.subplots_adjust(wspace=0.3)
+    # convert the graph into a histogram
+    hist, bins = np.histogram(df["hit_time"], bins=bin_edges)
+    # real time
+    sns.histplot(x=x_axis, weights=hist, ax=axs[0], bins=100)
+    axs[0].set_title('Sampling Hits Count for Malloc Objects in Real time')
+    axs[0].set_xlabel('Real Timing of Sampling Hits Across Generations (seconds)')
+    axs[0].set_ylabel('Number of Sampling Hits')
+    for moment in event_moment:
+        axs[0].axvline(x=moment, color='green', linestyle='--')
+
+    plt.savefig(savepath + '_realtime')
+    if filter_flag:
+        plt.savefig(filter_save_path + '_realtime')
+    plt.close(fig)
+
 # save the picture shows that absolute/relative hit time and lifetime of all objs alloed from this malloc
 def record_malloc(pid, df_abs, df_lifetime, df_rel, per_caller_info, all_hits_count, number_of_unsampled_malloc, number_of_sampled_malloc, long_lifetime_propotion, filter_flag, savepath, filter_save_path):
     global lifetime_threshold, alloc_type_mapping
@@ -329,6 +362,8 @@ def record_malloc(pid, df_abs, df_lifetime, df_rel, per_caller_info, all_hits_co
     if filter_flag:
         plt.savefig(filter_save_path)
     plt.close(fig)
+
+    record_malloc_with_realtime(df_abs, filter_flag, savepath, filter_save_path)
 
 # save the picture shows that the lifetime and size of each objs alloced from this malloc
 def record_objs_with_no_event(df_myaf, savepath):
@@ -469,6 +504,14 @@ def statistics(df_per_malloc, df_myaf, filter_flag, savepath, filter_save_path):
     record_internal(intervals, intervals_128kfilter, obj_sizes, obj_sizes_128kfilter, filter_flag, savepath, filter_save_path)
     record_objs(obj_sizes, statistics_hits, statistics_lifetime, no_event_objs, filter_flag, savepath, filter_save_path)
     
+def event_moment_init():
+    global event_momentwith 
+    with open("./event_moment.txt", "r") as f:
+        while True:
+            moment = f.readline()
+            if len(moment) == 0:
+                break
+            event_moment.append(float(moment))
 
 def main():
     global endtime, lifetime_threshold
@@ -494,6 +537,9 @@ def main():
                     fileresult_names[pid].append("./result/" + data + "/" + chunk)
     with open("./result/endtime", "r") as f:
         endtime = float(f.readline())
+
+    # initialize event moment
+    event_moment_init()
 
     # for every pid have files myaf
     for pid in pids:

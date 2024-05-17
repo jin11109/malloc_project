@@ -37,6 +37,13 @@ else
     mkdir ./result_picture
 fi
 
+if [ ! -f "./event_moment.txt" ]; then
+    touch "./event_moment.txt"
+else
+    rm ./event_moment.txt
+    touch ./event_moment.txt
+fi
+
 echo 0 | sudo tee /proc/sys/kernel/randomize_va_space > /dev/null
 
 # compile preload program
