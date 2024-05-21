@@ -176,7 +176,6 @@ def deal_with_files():
         # for every chunks, apply a new column "pool begin" as inner join key
         path = "./data/script_with_poolkey_" + str(pid) + "/"
         os.mkdir(path)
-        dir_flag = True
         chunk_index = 0
         scripts_with_poolkey[pid] = []
         for chunk in scripts[pid]:
@@ -192,7 +191,6 @@ def deal_with_files():
                 print(str(pid) + "this chunk in script didn't hit pool")
                 continue
             
-            dir_flag = False
             chunk_path = path + "chunk" + str(chunk_index) + ".csv"
             df_script.export(chunk_path, progress=True)
             
@@ -202,9 +200,11 @@ def deal_with_files():
             chunk_index += 1
 
         # delete the dir without any chunks inside
-        if dir_flag:
+        try :
             os.rmdir(path)
             del scripts_with_poolkey[pid]
+        except:
+            None
 
         # for alloc log files, apply a same new column "pool begin" as inner join key
         df_myaf["pool_begin"] = df_myaf["data_addr"].apply(apply_join_key).evaluate()
@@ -227,7 +227,6 @@ def deal_with_files():
         # for every chunk, insert datakey
         path = "./data/script_with_datakey_" + str(pid) + "/"
         chunk_index = 0
-        dir_flag = True
         scripts_result[pid] = []
         os.mkdir(path)
         for chunk in scripts_with_poolkey[pid]:
@@ -331,22 +330,25 @@ def deal_with_files():
             
             if len(df_script) == 0:
                 del df_script
+                # remove the script_with_datakey file witch have not successfully merged with malloc info
+                os.remove(chunk_path)
+                gc.collect()
                 continue
             
-            dir_flag = False
-            result_path = path + "chunk" + str(chunk_index) + ".csv"
-            df_script.export(result_path, progress=True)
+            df_script.export(chunk_path, progress=True)
             del df_script
             gc.collect()
-            scripts_result[pid].append(result_path)
+            scripts_result[pid].append(chunk_path)
             #df_joined[pid] = vaex.from_csv("./data/join_" + str(pid) + ".csv", dtype=df_datatype)
 
             chunk_index += 1
 
         # delete the dir without any chunks inside
-        if dir_flag:
+        try:
             os.rmdir(path)
             del scripts_result[pid]
+        except:
+            None
 
     # add some information
     for pid in scripts_result:
