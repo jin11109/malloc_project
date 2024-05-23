@@ -2,12 +2,12 @@
 
 if [ $# == 0 ]; then
     echo "demo.sh : parameter error"
-    echo "usage : ./demo.sh [intel/amd] target_program"
+    echo "usage : ./demo.sh [amdl3/amdibs/intel] target_program"
     exit 0
 fi
 
-if [ ! "$1" = "amd" ] && [ ! "$1" = "intel" ]; then
-    echo "choose arch (amd/intel)"
+if [ ! "$1" = "amdl3" ] && [ ! "$1" = "intel" ] && [ ! "$1" = "amdibs" ]; then
+    echo "choose arch (amdl3/amdibs/intel)"
     exit 0
 fi
 
@@ -73,15 +73,16 @@ fi
 python3 ./data_record.py &
 
 # for amd cpu
-if [ "$1" = "amd" ]; then
-    #perf record -e ibs_op/cnt_ctl=1/pp --count=50000 --timestamp --data -o ./myperf.data ./program.sh
+if [ "$1" = "amdl3" ]; then
     perf record -e ibs_op/l3missonly=1,cnt_ctl=1/pp --count=1000 --timestamp --data -o ./myperf.data ./program.sh
+elif [ "$1" = "amdibs" ]; then
+    perf record -e ibs_op/cnt_ctl=1/pp --count=50000 --timestamp --data -o ./myperf.data ./program.sh
 # for intel cpu
 elif [ "$1" = "intel" ]; then
     #perf record -e MEM_UOPS_RETIRED.ALL_STORES:ppp,MEM_UOPS_RETIRED.ALL_LOADS:ppp --count=20000 --timestamp --data -o ./myperf.data ./program.sh
     perf record -e MEM_LOAD_UOPS_RETIRED.L3_MISS:ppp --count=500 --timestamp --data -o ./myperf.data ./program.sh
 else
-    echo "choose arch (amd/intel)"
+    echo "choose arch (amdl3/amdibs/intel)"
     exit 0
 fi
 # wait for ./data_record.py
