@@ -476,7 +476,7 @@ def statistics(df_per_malloc, df_myaf, filter_flag, savepath, filter_save_path):
             last_time = hit_time
 
         # record other information
-        if len(obj_performance) > 100 or (filter_flag and len(malloc_objs) < 1000):
+        if len(obj_performance) > 100 or (filter_flag and len(malloc_objs) < 100):
             record_obj(obj_life_time, obj_size, obj_interval, obj_performance_without_lifetime, obj_alloctime, obj_freetime, savepath + "_obj/", obj_addr, index)
             dir_flag = False
 
