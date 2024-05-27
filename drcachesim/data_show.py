@@ -424,52 +424,79 @@ def statistics(df_per_malloc, df_myaf, filter_flag, savepath, filter_save_path):
     intervals_128kfilter = []
     obj_sizes = []
     obj_sizes_128kfilter = []
-
     statistics_hits = []
-    statistics_lifetime = []
 
     if not Path(savepath + "_obj").exists():
         os.makedirs(savepath + "_obj")
+
     # for every objects calculate the interval hit time
-    for index in malloc_objs:
-        # record the object hit interval
-        obj_interval = []
-        # get data
-        obj = malloc_objs[index]
-        print("    ", index, obj)
-        #print(df_per_malloc)
-
-        mask = df_per_malloc["data_addr"] == obj
-        obj_interval = df_per_malloc[mask]["hit_absolute_time"].to_numpy()
-        obj_performance = list(obj_interval.copy())
-
-        obj_life_time = float(df_per_malloc[mask]["interval_time"].iloc[0: 1].to_string(index = False))
-        obj_size = int(df_per_malloc[mask]["size"].iloc[0: 1].to_string(index = False), 10)
-        obj_performance_without_lifetime = obj_performance
-        obj_interval = np.append(obj_interval, obj_life_time)
-        obj_performance.append(obj_life_time)
-        obj_addr = hex(int(df_per_malloc[mask]["data_addr"].iloc[0: 1].to_string(index = False), 10))
-        obj_alloctime = float(df_per_malloc[mask]["alloc_time"].iloc[0: 1].to_string(index = False))
-        obj_freetime = float(df_per_malloc[mask]["free_time"].iloc[0: 1].to_string(index = False))
+    def process_obj(indexs, statistics_hits_local, intervals_local, intervals_128kfilter_local):
+        nonlocal malloc_objs, df_per_malloc
         
-        # insert size
-        obj_sizes.append(obj_size)
-        if obj_size <= 128 * 1024:
-            obj_sizes_128kfilter.append(obj_size)
+        for index in indexs:
+            # record the object hit interval
+            obj_interval = []
+            # get data
+            obj = malloc_objs[index]
+            # print("    ", index, obj)
+            # print(df_per_malloc)
 
-        obj_interval = np.sort(obj_interval)
-        first_hit = obj_interval[0]
-        obj_interval = np.diff(obj_interval)
-        obj_interval = list(np.append(obj_interval, first_hit))
-        intervals += obj_interval
-        if obj_size <= 128 * 1024:
-            intervals_128kfilter += obj_interval
+            mask = df_per_malloc["data_addr"] == obj
+            df_obj = df_per_malloc[mask]
+            obj_interval = df_obj["hit_absolute_time"].to_numpy()
+            obj_performance = list(obj_interval.copy())
 
-        # record other information
-        if len(obj_performance) > 100 or (filter_flag and len(malloc_objs) < 1000):
-            record_obj(obj_life_time, obj_size, obj_interval, obj_performance_without_lifetime, obj_alloctime, obj_freetime, savepath + "_obj/", obj_addr, index)
+            obj_life_time = float(df_obj["interval_time"].iloc[0: 1].to_string(index = False))
+            obj_size = int(df_obj["size"].iloc[0: 1].to_string(index = False), 10)
+            obj_performance_without_lifetime = obj_performance
+            obj_interval = np.append(obj_interval, obj_life_time)
+            obj_performance.append(obj_life_time)
+            obj_addr = hex(int(df_obj["data_addr"].iloc[0: 1].to_string(index = False), 10))
+            obj_alloctime = float(df_obj["alloc_time"].iloc[0: 1].to_string(index = False))
+            obj_freetime = float(df_obj["free_time"].iloc[0: 1].to_string(index = False))
+            
+            obj_interval = np.sort(obj_interval)
+            first_hit = obj_interval[0]
+            obj_interval = np.diff(obj_interval)
+            obj_interval = list(np.append(obj_interval, first_hit))
 
-        statistics_hits.append(len(obj_performance_without_lifetime))
+            intervals_local += obj_interval
+            if obj_size <= 128 * 1024:
+                intervals_128kfilter_local += obj_interval
+
+            # record other information
+            if len(obj_performance) > 100 or (filter_flag and len(malloc_objs) < 1000):
+                record_obj(obj_life_time, obj_size, obj_interval, obj_performance_without_lifetime, obj_alloctime, obj_freetime, savepath + "_obj/", obj_addr, index)
+
+            statistics_hits_local.append(len(obj_performance_without_lifetime))
+
+    # if there is so many obj in this malloc
+    # use multithreading to calculate
+    if len(malloc_objs) > 100:
+        thread_num = 16
+        split_index = list(malloc_objs.keys())
+        split_index = np.array_split(split_index, thread_num)
+        statistics_hits_locals = [[] for _ in range(thread_num)]
+        intervals_locals = [[] for _ in range(thread_num)]
+        intervals_128kfilter_local = [[] for _ in range(thread_num)]
+        threads = []
+        for i in range(thread_num):
+            thread = threading.Thread(target=process_obj, args=(split_index[i], statistics_hits_locals[i], intervals_locals[i], intervals_128kfilter_local[i]))
+            threads.append(thread)
+            thread.start()
+
+        # wait for all threads
+        for thread in threads:
+            thread.join()
+        
+        for i in range(thread_num):
+            statistics_hits += statistics_hits_locals[i]
+            intervals += intervals_locals[i]
+            intervals_128kfilter += intervals_128kfilter_local[i]
+
+    # else use original ways
+    else:
+        process_obj(list(malloc_objs.keys()), statistics_hits, intervals, intervals_128kfilter)
 
     try:
         os.rmdir(savepath + "_obj")
