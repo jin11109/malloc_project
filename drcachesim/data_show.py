@@ -428,7 +428,6 @@ def statistics(df_per_malloc, df_myaf, filter_flag, savepath, filter_save_path):
     statistics_hits = []
     statistics_lifetime = []
 
-    dir_flag = True
     if not Path(savepath + "_obj").exists():
         os.makedirs(savepath + "_obj")
     # for every objects calculate the interval hit time
@@ -441,11 +440,13 @@ def statistics(df_per_malloc, df_myaf, filter_flag, savepath, filter_save_path):
         #print(df_per_malloc)
 
         mask = df_per_malloc["data_addr"] == obj
-        obj_performance = df_per_malloc[mask]["hit_absolute_time"].to_numpy().tolist()
-        
+        obj_interval = df_per_malloc[mask]["hit_absolute_time"].to_numpy()
+        obj_performance = list(obj_interval.copy())
+
         obj_life_time = float(df_per_malloc[mask]["interval_time"].iloc[0: 1].to_string(index = False))
         obj_size = int(df_per_malloc[mask]["size"].iloc[0: 1].to_string(index = False), 10)
         obj_performance_without_lifetime = obj_performance
+        obj_interval = np.append(obj_interval, obj_life_time)
         obj_performance.append(obj_life_time)
         obj_addr = hex(int(df_per_malloc[mask]["data_addr"].iloc[0: 1].to_string(index = False), 10))
         obj_alloctime = float(df_per_malloc[mask]["alloc_time"].iloc[0: 1].to_string(index = False))
@@ -456,34 +457,24 @@ def statistics(df_per_malloc, df_myaf, filter_flag, savepath, filter_save_path):
         if obj_size <= 128 * 1024:
             obj_sizes_128kfilter.append(obj_size)
 
-        is_first = True
-        last_time = -100000
-        obj_performance.sort()
-        for hit_time in obj_performance:
-            #print(obj_alloc_time, obj_free_time)
-            if is_first:
-                interval = hit_time
-                is_first = False
-            else:
-                interval = hit_time - last_time
-            
-            # record ineterval data
-            obj_interval.append(interval)
-            intervals.append(interval)
-            if obj_size <= 128 * 1024:
-                intervals_128kfilter.append(interval)
-            
-            last_time = hit_time
+        obj_interval = np.sort(obj_interval)
+        first_hit = obj_interval[0]
+        obj_interval = np.diff(obj_interval)
+        obj_interval = list(np.append(obj_interval, first_hit))
+        intervals += obj_interval
+        if obj_size <= 128 * 1024:
+            intervals_128kfilter += obj_interval
 
         # record other information
-        if len(obj_performance) > 100 or (filter_flag and len(malloc_objs) < 100):
+        if len(obj_performance) > 100 or (filter_flag and len(malloc_objs) < 1000):
             record_obj(obj_life_time, obj_size, obj_interval, obj_performance_without_lifetime, obj_alloctime, obj_freetime, savepath + "_obj/", obj_addr, index)
-            dir_flag = False
 
         statistics_hits.append(len(obj_performance_without_lifetime))
 
-    if dir_flag:
+    try:
         os.rmdir(savepath + "_obj")
+    except:
+        None
 
     # statistics some information
     
