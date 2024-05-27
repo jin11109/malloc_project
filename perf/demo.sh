@@ -74,13 +74,13 @@ python3 ./data_record.py &
 
 # for amd cpu
 if [ "$1" = "amdl3" ]; then
-    perf record -e ibs_op/l3missonly=1,cnt_ctl=1/pp --count=256 --timestamp --data -o ./myperf.data ./program.sh
+    perf record -e ibs_op/l3missonly=1,cnt_ctl=1/pp --count=250 --timestamp --data -o ./myperf.data ./program.sh
 elif [ "$1" = "amdibs" ]; then
     perf record -e ibs_op/cnt_ctl=1/pp --count=50000 --timestamp --data -o ./myperf.data ./program.sh
 # for intel cpu
 elif [ "$1" = "intel" ]; then
     #perf record -e MEM_UOPS_RETIRED.ALL_STORES:ppp,MEM_UOPS_RETIRED.ALL_LOADS:ppp --count=20000 --timestamp --data -o ./myperf.data ./program.sh
-    perf record -e MEM_LOAD_UOPS_RETIRED.L3_MISS:ppp --count=256 --timestamp --data -o ./myperf.data ./program.sh
+    perf record -e MEM_LOAD_UOPS_RETIRED.L3_MISS:ppp --count=250 --timestamp --data -o ./myperf.data ./program.sh
 else
     echo "choose arch (amdl3/amdibs/intel)"
     exit 0
