@@ -58,6 +58,13 @@ else
     mkdir ./result_picture
 fi
 
+if [ ! -f "./event_moment.txt" ]; then
+    touch "./event_moment.txt"
+else
+    rm ./event_moment.txt
+    touch ./event_moment.txt
+fi
+
 # create the shell with preload 
 echo "#!/bin/bash" > ./program.sh
 echo "export LD_PRELOAD=\$LD_PRELOAD:/lib/mymalloc.so" >> ./program.sh
