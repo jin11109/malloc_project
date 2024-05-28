@@ -35,6 +35,7 @@ dtype = {
     "data_addr_end" : int,
     "pool_begin" : int,
     "generation" : float,
+    "lifetime" : float,
     "alloc_type" : str
 }
 
@@ -70,7 +71,7 @@ def DTW(df_per_malloc, savepath, malloc_info):
     x_axis[0] = 0
     # convert the graph into a histogram
     standard_hist, bins = np.histogram(standard, bins=bin_edges)
-    standard_hist_avg = standard_hist.copy() / float(malloc_info["caller_objects_nummean"].to_string(index = False))
+    standard_hist_avg = standard_hist.copy() / float(malloc_info["count_of_objs"].to_string(index = False))
 
     # discard some mallocs which have few objects
     #if len(standard) < 200 or standard[-1] - standard[0] < 1:
@@ -193,7 +194,7 @@ def record_objs(obj_sizes, statistics_hits, statistics_lifetime, no_event_objs, 
     if len(no_event_objs) == 0:
         return
     
-    no_event_obj_lifetime = no_event_objs["generation"]
+    no_event_obj_lifetime = no_event_objs["lifetime"]
     no_event_obj_sizes = no_event_objs["size"]
     fig, axs = plt.subplots(1, 2, figsize=(14, 7), gridspec_kw={'bottom': 0.3, 'top': 0.9})
     sns.histplot(x=no_event_obj_lifetime, ax=axs[0], bins=100)
@@ -208,7 +209,7 @@ def record_objs(obj_sizes, statistics_hits, statistics_lifetime, no_event_objs, 
     axs[1].set_yscale('log')
     
     number_of_total_no_event_objs = len(no_event_objs)
-    number_of_no_event_objs_shortlifetime = len(no_event_objs[no_event_objs["generation"] < LIFE_TIME_THRESHOLD])
+    number_of_no_event_objs_shortlifetime = len(no_event_objs[no_event_objs["lifetime"] < LIFE_TIME_THRESHOLD])
     number_of_no_event_objs_smallsize = len(no_event_objs[no_event_objs["size"] < 64])
     obj_info = "malloc objects information" \
                 + "\n" + "|  Number of tatal no event objects : " + str(number_of_total_no_event_objs) \
@@ -306,7 +307,7 @@ def record_malloc_with_realtime(df, savepath):
     # real time
     sns.histplot(x=x_axis, weights=hist, ax=axs[0], bins=100)
     axs[0].set_title('Sampling Hits Count for Malloc Objects in Real time')
-    axs[0].set_xlabel('Real Timing of Sampling Hits Across Generations (seconds)')
+    axs[0].set_xlabel('Real Timing of Sampling Hits Across lifetimes (seconds)')
     axs[0].set_ylabel('Number of Sampling Hits')
     for moment in event_moment:
         axs[0].axvline(x=moment, color='green', linestyle='--')
@@ -323,7 +324,7 @@ def record_malloc(pid, df_abs, df_lifetime, df_rel, per_caller_info, all_hits_co
     # absolute time
     sns.histplot(x=df_abs["hit_absolute_time"], ax=axs[0], bins=100)
     axs[0].set_title('Sampling Hits Count for Malloc Objects')
-    axs[0].set_xlabel('Timing of Sampling Hits Across Generations (seconds)')
+    axs[0].set_xlabel('Timing of Sampling Hits Across lifetimes (seconds)')
     axs[0].set_ylabel('Number of Sampling Hits')
     axs[0].tick_params(axis='x', rotation=15)
     axs[0].set_yscale('log')
@@ -332,15 +333,15 @@ def record_malloc(pid, df_abs, df_lifetime, df_rel, per_caller_info, all_hits_co
     rel_bins = np.linspace(-3, 103, 101)
     sns.histplot(x=df_rel["hit_relative_time"], ax=axs[1], bins=rel_bins)
     axs[1].set_title('Sampling Hits Count for Malloc Objects')
-    axs[1].set_xlabel('Timing of Sampling Hits Across Generations (%)')
+    axs[1].set_xlabel('Timing of Sampling Hits Across lifetimes (%)')
     axs[1].set_ylabel('Number of Sampling Hits')
     axs[1].set_yscale('log')
     #axs[1].set_xlim(-3, 103)
 
     # life time
-    sns.histplot(x=df_lifetime["generation"], ax=axs[2], bins=100)
-    axs[2].set_title('Generation Lengths of Malloc Objects')
-    axs[2].set_xlabel('Generation Lengths (seconds)')
+    sns.histplot(x=df_lifetime["lifetime"], ax=axs[2], bins=100)
+    axs[2].set_title('lifetime Lengths of Malloc Objects')
+    axs[2].set_xlabel('lifetime Lengths (seconds)')
     axs[2].set_ylabel('Number of Malloc Objects')
     axs[2].tick_params(axis='x', rotation=15)
     axs[2].set_yscale('log')
@@ -356,9 +357,9 @@ def record_malloc(pid, df_abs, df_lifetime, df_rel, per_caller_info, all_hits_co
 
     malloc_info = "alloc information (type: "+  alloc_type + ")" + " (temperature: " + temperature + ")"\
         + "\n" + "|  malloc address : " + per_caller_info["caller_addr_str"].to_string(index=False) \
-        + "\n" + "|  Sampling Hits Count of malloc Objects : " + per_caller_info["sizecount"].to_string(index=False) \
-        + "\n" + "|  Size of All Allocated Spaces by this malloc: " + per_caller_info["caller_total_alloc_sizemean"].to_string(index=False) \
-        + "\n" + "|  Number of Objects Allocated by this malloc : " + per_caller_info["caller_objects_nummean"].to_string(index=False) \
+        + "\n" + "|  Sampling Hits Count of malloc Objects : " + per_caller_info["count_of_hits"].to_string(index=False) \
+        + "\n" + "|  Size of All Allocated Spaces by this malloc: " + per_caller_info["total_alloc_size"].to_string(index=False) \
+        + "\n" + "|  Number of Objects Allocated by this malloc : " + per_caller_info["count_of_objs"].to_string(index=False) \
         + "\n" + f"|  Propotion of Long Lifetime Objects (lifetime >= {LIFE_TIME_THRESHOLD}s) : " + str(long_lifetime_propotion * 100) + "%" \
         + "\n" + f"|  Propotion of hit at percentage of lifetime between ({HIT_LIFETIME_PERCENTAGE_BOUND[0] * 100}%, {HIT_LIFETIME_PERCENTAGE_BOUND[1] * 100}%) : " + cold_score_text
     other_info = "Information about this experiment" \
@@ -379,12 +380,12 @@ def record_objs_with_no_event(df_myaf, savepath):
 
     number_of_total_objs = len(df_myaf)
     number_of_small_size = len(df_myaf[df_myaf["size"] <= 64])
-    number_of_short_lifetime = len(df_myaf[df_myaf["generation"] < LIFE_TIME_THRESHOLD])
+    number_of_short_lifetime = len(df_myaf[df_myaf["lifetime"] < LIFE_TIME_THRESHOLD])
 
     # print(number_of_short_lifetime, number_of_small_size, number_of_total_objs)
 
     fig, axs = plt.subplots(1, 2, figsize=(14, 7), gridspec_kw={'bottom': 0.3, 'top': 0.9})
-    sns.histplot(x=df_myaf["generation"], ax=axs[0], bins=100)
+    sns.histplot(x=df_myaf["lifetime"], ax=axs[0], bins=100)
     axs[0].set_title('Counting the number of lifetime of an object')
     axs[0].set_ylabel('number of objects')
     axs[0].set_xlabel('number of lifetime')
@@ -454,7 +455,7 @@ def statistics(df_per_malloc, df_myaf, filter_flag, savepath, interval_data):
             obj_interval = df_obj["hit_absolute_time"].to_numpy()
             obj_performance = list(obj_interval.copy())
 
-            obj_life_time = float(df_obj["interval_time"].iloc[0: 1].to_string(index = False))
+            obj_life_time = float(df_obj["lifetime"].iloc[0: 1].to_string(index = False))
             obj_size = int(df_obj["size"].iloc[0: 1].to_string(index = False), 10)
             obj_performance_without_lifetime = obj_performance
             obj_interval = np.append(obj_interval, obj_life_time)
@@ -518,12 +519,12 @@ def statistics(df_per_malloc, df_myaf, filter_flag, savepath, interval_data):
     # mask for objs' size bigger then 128k 
     mask_128ksize = df_myaf["size"] <= 128 * 1024
 
-    intervals += df_myaf[mask]["generation"].to_numpy().tolist()
-    intervals_128kfilter += df_myaf[mask & mask_128ksize]["generation"].to_numpy().tolist()
+    intervals += df_myaf[mask]["lifetime"].to_numpy().tolist()
+    intervals_128kfilter += df_myaf[mask & mask_128ksize]["lifetime"].to_numpy().tolist()
     obj_sizes = df_myaf["size"].to_numpy().tolist()
     obj_sizes_128kfilter = df_myaf[mask_128ksize]["size"].to_numpy().tolist()
     statistics_hits += [0] * len(df_myaf[mask])
-    statistics_lifetime = df_myaf["generation"].to_numpy().tolist()
+    statistics_lifetime = df_myaf["lifetime"].to_numpy().tolist()
     # objs have no event
     no_event_objs = df_myaf[mask]
     
@@ -585,7 +586,7 @@ def main():
     global endtime, args
 
     fileresult_names = {}
-    fileresult_notsampled_names = {}
+    fileresult_unsampled_names = {}
     fileresult_myaf = {}
     pids = {}
     all_data = os.listdir("./result")
@@ -594,7 +595,7 @@ def main():
         if re.search(r'\d', data) is not None: 
             pid = int(''.join(re.findall(r'\d+', data)), 10)
             if "result_not_be_sampled" in data:
-                fileresult_notsampled_names[pid] = "./result/" + data
+                fileresult_unsampled_names[pid] = "./result/" + data
             elif "myaf" in data:
                 fileresult_myaf[pid] = "./result/" + data
                 pids[pid] = True
@@ -614,18 +615,20 @@ def main():
         # open myaf for every alloc and free information            
         df_myaf = pd.read_csv(fileresult_myaf[pid], dtype=dtype)
         df_myaf = pd.DataFrame(df_myaf)        
+        # I temporarily rename the column avoid to get it wrong
+        df_myaf = df_myaf.rename(columns={"generation": "lifetime"})
 
         number_of_unsampled_malloc = 0
         
         # In this pid, if all the objects alloced from some malloc have no any event(cachemiss)
         # then we output some picture with the information for these mallocs and these mallocs'obj  
-        if fileresult_notsampled_names.get(pid) is not None:
+        if fileresult_unsampled_names.get(pid) is not None:
             # put result picture into this dir
             dir_path = "./result_picture/" + str(pid) + "noevent"
             if not Path(dir_path).exists():
                 os.makedirs(dir_path)
             
-            df_not = pd.read_csv(fileresult_notsampled_names[pid], dtype=dtype)
+            df_not = pd.read_csv(fileresult_unsampled_names[pid], dtype=dtype)
             df_not = pd.DataFrame(df_not)
 
             print("\n")
@@ -658,9 +661,12 @@ def main():
 
             # drop error
             # df.drop_duplicates(subset=["hit_time"], keep=False, inplace=True)
-
+            
+            # I temporarily rename the column avoid to get it wrong
+            df = df.rename(columns={"interval_time": "lifetime"})
             # add another column
             df["hit_absolute_time"] = df["hit_time"] - df["alloc_time"]
+            df_myaf["lifetime_objsize_product"] = df_myaf["lifetime"] * df_myaf["size"]
 
             # group the data by caller addr and count some information 
             indicate = df.groupby("caller_addr_str", as_index=False).aggregate({
@@ -671,10 +677,15 @@ def main():
                 # total size alloced by every malloc
                 "caller_total_alloc_size": ["mean"],
                 # max obj lifetime
-                "interval_time": ["max"]
+                "lifetime": ["max"]
             })
             indicate.columns = indicate.columns.map(''.join)
-            
+            indicate = indicate.rename(columns={
+                "sizecount": "count_of_hits",
+                "caller_objects_nummean": "count_of_objs",
+                "caller_total_alloc_sizemean" : "total_alloc_size"
+            })
+
             # record some information
             number_of_sampled_malloc = len(indicate)
             all_hits_count = len(df)
@@ -696,18 +707,18 @@ def main():
                 per_caller_info = indicate.iloc[i:i + 1, :]
                 print("\nmalloc " + str(i) + "\n", per_caller_info)
 
-                mask = df["interval_time"] > LIFE_TIME_THRESHOLD
+                mask = df["lifetime"] > LIFE_TIME_THRESHOLD
                 mask2 = df["caller_addr_str"].isin(per_caller_info["caller_addr_str"])
                 mask3 = df_myaf["caller_addr"].isin([int(per_caller_info["caller_addr_str"].to_string(index=False), 16)])
-                mask4 = df_myaf[mask3]["generation"] >= LIFE_TIME_THRESHOLD
+                mask4 = df_myaf[mask3]["lifetime"] >= LIFE_TIME_THRESHOLD
                 
                 # for filter 
                 # only consider the malloc whitch number of objs is more than SMALL_AMOUNT_OF_OBJS
-                condition1 = float(per_caller_info["caller_objects_nummean"].to_string(index=False)) > SMALL_AMOUNT_OF_OBJS
+                condition1 = float(per_caller_info["count_of_objs"].to_string(index=False)) > SMALL_AMOUNT_OF_OBJS
                 # only consider the malloc whitch max lifetime of objs in this malloc is >= LIFE_TIME_THRESHOLD
-                condition2 = float(per_caller_info["interval_timemax"].to_string(index=False)) >= LIFE_TIME_THRESHOLD
+                condition2 = float(per_caller_info["lifetimemax"].to_string(index=False)) >= LIFE_TIME_THRESHOLD
                 # only consider the malloc whitch propotion of long lifetime objs bigger than LONG_LIFE_TIME_PROPOTION
-                long_lifetime_propotion = len(df_myaf[mask3 & mask4]) / float(per_caller_info["caller_objects_nummean"].to_string(index=False))
+                long_lifetime_propotion = len(df_myaf[mask3 & mask4]) / float(per_caller_info["count_of_objs"].to_string(index=False))
                 condition3 = long_lifetime_propotion > LONG_LIFE_TIME_PROPOTION
                 filter_flag = condition1 and condition2 and condition3
 
