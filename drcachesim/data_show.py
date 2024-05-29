@@ -20,6 +20,44 @@ import json
 import argparse
 import shutil
 
+class Alloc:
+    def __init__(self, alloc_temper):
+        self.total_alloc_size = 0
+        self.lifetime_objsize_product = 0
+        self.count = 0
+        self.total_hits = 0
+        self.temper = alloc_temper
+
+class Allocs_info:
+    def __init__(self, pid):
+        self.pid = pid
+        # "cold", "other" are include in "sampled" 
+        self.classification = ["cold", "unsampled", "other", "sampled"]
+        self.classify = {}
+        for i in self.classification:
+            self.classify[i] = Alloc(i)
+    
+    def count_alloc_sum(self):
+        temp = 0
+        for i in self.classification:
+            if i != "sampled":
+                temp += self.classify[i].count
+        return temp
+
+    def total_alloc_size_sum(self):
+        temp = 0
+        for i in self.classification:
+            if i != "sampled":
+                temp += self.classify[i].total_alloc_size
+        return temp
+    
+    def lifetime_objsize_product_sum(self):
+        temp = 0
+        for i in self.classification:
+            if i != "sampled":
+                temp += self.classify[i].lifetime_objsize_product
+        return temp
+
 dtype = {
     "caller_addr" : int,
     "data_addr" : int,
@@ -316,7 +354,7 @@ def record_malloc_with_realtime(df, savepath):
     plt.close(fig)
 
 # save the picture shows that absolute/relative hit time and lifetime of all objs alloed from this malloc
-def record_malloc(pid, df_abs, df_lifetime, df_rel, per_caller_info, all_hits_count, number_of_unsampled_malloc, number_of_sampled_malloc, long_lifetime_propotion, cold_score, savepath):
+def record_malloc(df_abs, df_lifetime, df_rel, per_caller_info, long_lifetime_propotion, cold_score, savepath):
     global alloc_type_mapping
     
     fig, axs = plt.subplots(1, 3, figsize=(17, 7), gridspec_kw={'bottom': 0.3, 'top': 0.9}) # bottom and top is percentage 
@@ -362,18 +400,57 @@ def record_malloc(pid, df_abs, df_lifetime, df_rel, per_caller_info, all_hits_co
         + "\n" + "|  Number of Objects Allocated by this malloc : " + per_caller_info["count_of_objs"].to_string(index=False) \
         + "\n" + f"|  Propotion of Long Lifetime Objects (lifetime >= {LIFE_TIME_THRESHOLD}s) : " + str(long_lifetime_propotion * 100) + "%" \
         + "\n" + f"|  Propotion of hit at percentage of lifetime between ({HIT_LIFETIME_PERCENTAGE_BOUND[0] * 100}%, {HIT_LIFETIME_PERCENTAGE_BOUND[1] * 100}%) : " + cold_score_text
-    other_info = "Information about this experiment" \
-        + "\n" + "|  All Sampling Hits Count of malloc Objects for PID " + str(pid) + " : " + str(all_hits_count) \
-        + "\n" + "|  Count of Unsampled mallocs for PID " + str(pid) + " : " + str(number_of_unsampled_malloc)\
-        + "\n" + "|  Count of sampled mallocs for PID " + str(pid) + " : " + str(number_of_sampled_malloc)\
-
+    
     fig.text(0.2, 0.2,  malloc_info, ha='left', va='top', fontsize=10, color='blue')
-    fig.text(0.6, 0.2, other_info, ha='left', va='top', fontsize=10, color='blue')
+    #fig.text(0.6, 0.2, other_info, ha='left', va='top', fontsize=10, color='blue')
     
     plt.savefig(savepath)
     plt.close(fig)
 
     record_malloc_with_realtime(df_abs, savepath)
+
+def record_mallocs(allocs_info, savepath):
+    fig, axs = plt.subplots(1, 2, figsize=(15, 6), gridspec_kw={'bottom': 0.3, 'top': 0.9})
+    plt.subplots_adjust(wspace=0.3)
+
+    classifications = ["cold", "unsampled", "other"]
+    labels = []
+    titles = []
+    data = []
+
+    count_alloc_sum = allocs_info.count_alloc_sum()
+    total_alloc_size_sum = allocs_info.total_alloc_size_sum()
+    lifetime_objsize_product_sum = allocs_info.lifetime_objsize_product_sum()
+    for classification in classifications:
+        data.append(allocs_info.classify[classification].count / count_alloc_sum * 100)
+        titles.append("count of allocs")
+        labels.append(classification)
+
+        data.append(allocs_info.classify[classification].total_alloc_size / total_alloc_size_sum * 100)
+        titles.append("total alloc size")
+        labels.append(classification)
+
+        data.append(allocs_info.classify[classification].lifetime_objsize_product / lifetime_objsize_product_sum * 100)
+        titles.append("production of\nlifetime and objs size")
+        labels.append(classification)
+
+    sns.barplot(x=titles, y=data, hue=labels, ax=axs[0], estimator=sum, errorbar=None)
+    axs[0].set_ylabel("Propotion")
+    #axs[0].bar_label(axs[0].containers[0])
+    for container in axs[0].containers:
+        labels = [f"{float(v.get_height()):.2f}%" for v in container]
+        axs[0].bar_label(container, labels=labels)
+
+    mallocs_info = f"allocs information (pid : {allocs_info.pid})"\
+        + "\n" + "|  count of allocs : " + f"cold({allocs_info.classify['cold'].count}),  unsampled({allocs_info.classify['unsampled'].count}),  other({allocs_info.classify['other'].count})" \
+        + "\n" + "|  total alloc size : " + f"cold({allocs_info.classify['cold'].total_alloc_size}),  unsampled({allocs_info.classify['unsampled'].total_alloc_size}),  other({allocs_info.classify['other'].total_alloc_size})" \
+        + "\n" + "|  production of lifetime and objs size : " + f"cold({allocs_info.classify['cold'].lifetime_objsize_product:.2f}),  unsampled({allocs_info.classify['unsampled'].lifetime_objsize_product:.2f}),  other({allocs_info.classify['other'].lifetime_objsize_product:.2f})" \
+        + "\n" + f"|  Count of total hits for PID({allocs_info.pid}) : " + str(allocs_info.classify["sampled"].total_hits)
+
+    fig.text(0.2, 0.2,  mallocs_info, ha='left', va='top', fontsize=10, color='blue')
+
+    plt.savefig(savepath)
+    plt.close(fig)
 
 # save the picture shows that the lifetime and size of each objs alloced from this malloc
 def record_objs_with_no_event(df_myaf, savepath):
@@ -573,6 +650,15 @@ def classify_image(source_dir, name, target_dir, flag):
         if name in data and data.endswith(".png"):
             shutil.copy(source_dir + '/' + data, target_dir)
 
+def update_allocs_info(allocs_info, allocs_temper, df_myaf_total_size):
+    for caller_addr in allocs_temper:
+        mask = df_myaf_total_size["caller_addr"] == caller_addr
+        if allocs_temper[caller_addr] != "sampled":
+            alloc_temper = allocs_temper[caller_addr]
+            allocs_info.classify[alloc_temper].count += 1
+            allocs_info.classify[alloc_temper].lifetime_objsize_product += df_myaf_total_size[mask]["lifetime_objsize_productsum"].iloc[0]
+            allocs_info.classify[alloc_temper].total_alloc_size += df_myaf_total_size[mask]["total_alloc_size"].iloc[0]
+
 def event_moment_init():
     global event_moment
     with open("./event_moment.txt", "r") as f:
@@ -618,8 +704,18 @@ def main():
         # I temporarily rename the column avoid to get it wrong
         df_myaf = df_myaf.rename(columns={"generation": "lifetime"})
 
-        number_of_unsampled_malloc = 0
-        
+        allocs_info = Allocs_info(pid)
+        allocs_temper = {}
+        df_myaf["lifetime_objsize_product"] = df_myaf["lifetime"].clip(lower=0) * df_myaf["size"]
+        df_myaf_total_size =  df_myaf.groupby("caller_addr", as_index=False).aggregate({
+            "lifetime_objsize_product": ["sum"],
+            "size": ["sum"]
+        })
+        df_myaf_total_size.columns = df_myaf_total_size.columns.map(''.join)
+        df_myaf_total_size = df_myaf_total_size.rename(columns={
+            "sizesum": "total_alloc_size"
+        })
+
         # In this pid, if all the objects alloced from some malloc have no any event(cachemiss)
         # then we output some picture with the information for these mallocs and these mallocs'obj  
         if fileresult_unsampled_names.get(pid) is not None:
@@ -632,8 +728,7 @@ def main():
             df_not = pd.DataFrame(df_not)
 
             print("\n")
-            number_of_unsampled_malloc = len(df_not.copy())
-            print(str(pid) + " not be sampled : ", number_of_unsampled_malloc)
+            print(str(pid) + " not be sampled : ", len(df_not))
             record_size_with_no_event(pid, df_not)
 
             # for every malloc, we save the picture shows that the lifetime and size of all objs in this malloc
@@ -642,6 +737,7 @@ def main():
                 print("no event", index, hex(caller_addr))
                 mask = df_myaf["caller_addr"] == caller_addr
                 record_objs_with_no_event(df_myaf[mask], dir_path + "/" + str(index) + "_" + str(hex(caller_addr)))
+                allocs_temper[caller_addr] = "unsampled"
                 index += 1
         
         # In this pid, if one of the objects alloced from the malloc have a event(cachemiss)
@@ -666,7 +762,6 @@ def main():
             df = df.rename(columns={"interval_time": "lifetime"})
             # add another column
             df["hit_absolute_time"] = df["hit_time"] - df["alloc_time"]
-            df_myaf["lifetime_objsize_product"] = df_myaf["lifetime"] * df_myaf["size"]
 
             # group the data by caller addr and count some information 
             indicate = df.groupby("caller_addr_str", as_index=False).aggregate({
@@ -687,9 +782,9 @@ def main():
             })
 
             # record some information
-            number_of_sampled_malloc = len(indicate)
-            all_hits_count = len(df)
-            print(str(pid) + " sample num : ", number_of_sampled_malloc)
+            allocs_info.classify["sampled"].count = len(indicate)
+            allocs_info.classify["sampled"].total_hits = len(df)
+            print(str(pid) + " sample num : ", allocs_info.classify["sampled"].count)
 
             # put result picture into this dir
             dir_path = "./result_picture/" + str(pid)
@@ -703,13 +798,14 @@ def main():
                 os.makedirs(coldmalloc_dir_path)
 
             # make pictures with every malloc address 
-            for i in range(number_of_sampled_malloc):
+            for i in range(allocs_info.classify["sampled"].count):
                 per_caller_info = indicate.iloc[i:i + 1, :]
                 print("\nmalloc " + str(i) + "\n", per_caller_info)
 
+                caller_addr = int(per_caller_info["caller_addr_str"].to_string(index=False), 16)
                 mask = df["lifetime"] > LIFE_TIME_THRESHOLD
                 mask2 = df["caller_addr_str"].isin(per_caller_info["caller_addr_str"])
-                mask3 = df_myaf["caller_addr"].isin([int(per_caller_info["caller_addr_str"].to_string(index=False), 16)])
+                mask3 = df_myaf["caller_addr"].isin([caller_addr])
                 mask4 = df_myaf[mask3]["lifetime"] >= LIFE_TIME_THRESHOLD
                 
                 # for filter 
@@ -725,7 +821,7 @@ def main():
                 # get savepath
                 picture_name = re.sub(r'\s+', '_', per_caller_info["caller_addr_str"].to_string())
                 savepath = dir_path + "/" + picture_name
-                
+
                 # get interval data or processing data
                 interval_data = {}
                 if args.just_filter_malloc:
@@ -739,15 +835,22 @@ def main():
 
                 # test if the malloc is cold with our policy
                 is_cold, cold_score = is_cold_malloc(df[mask & mask2], filter_flag)
+                if is_cold:
+                    allocs_temper[caller_addr] = "cold"
+                else:
+                    allocs_temper[caller_addr] = "other"
 
-                record_malloc(pid, df[mask2], df_myaf[mask3], df[mask & mask2], per_caller_info, all_hits_count, number_of_unsampled_malloc, 
-                            number_of_sampled_malloc, long_lifetime_propotion, cold_score, savepath)
+                record_malloc(df[mask2], df_myaf[mask3], df[mask & mask2], per_caller_info, 
+                              long_lifetime_propotion, cold_score, savepath)
 
                 classify_image(dir_path, picture_name, filter_dir_path, filter_flag)
                 classify_image(dir_path, picture_name, coldmalloc_dir_path, is_cold)
 
                 # calculate DTW
                 #DTW(df[mask2], dir_path + "/" + picture_name, per_caller_info) 
+
+        update_allocs_info(allocs_info, allocs_temper, df_myaf_total_size)
+        record_mallocs(allocs_info, coldmalloc_dir_path + "/all_allocs")
 
 if __name__ == "__main__":
     # Turn off the automatic using scientific notation at axis lable
