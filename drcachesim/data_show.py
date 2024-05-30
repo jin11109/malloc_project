@@ -534,13 +534,13 @@ def statistics(df_per_malloc, df_myaf, filter_flag, savepath, interval_data):
 
             obj_life_time = float(df_obj["lifetime"].iloc[0: 1].to_string(index = False))
             obj_size = int(df_obj["size"].iloc[0: 1].to_string(index = False), 10)
-            obj_performance_without_lifetime = obj_performance
+            obj_performance_without_lifetime = obj_performance.copy()
             obj_interval = np.append(obj_interval, obj_life_time)
             obj_performance.append(obj_life_time)
             obj_addr = hex(int(df_obj["data_addr"].iloc[0: 1].to_string(index = False), 10))
             obj_alloctime = float(df_obj["alloc_time"].iloc[0: 1].to_string(index = False))
             obj_freetime = float(df_obj["free_time"].iloc[0: 1].to_string(index = False))
-            
+
             obj_interval = np.sort(obj_interval)
             first_hit = obj_interval[0]
             obj_interval = np.diff(obj_interval)
