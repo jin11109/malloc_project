@@ -83,7 +83,7 @@ LONG_LIFE_TIME_PROPOTION = 0.8
 SMALL_AMOUNT_OF_OBJS = 5
 INTERVAL_TIME_BOUND = (0.20, 0.60)
 INTERVAL_TIME_PROPOTION_THRESHOLD = 0.001
-HIT_LIFETIME_PERCENTAGE_BOUND = (0.20, 0.70)
+HIT_LIFETIME_PERCENTAGE_BOUND = (20, 70)
 HIT_LIFETIME_BOUND_PROPOTION_THRESHOLD = 0.001
 alloc_type_mapping = {
     "m" : "malloc",
@@ -354,7 +354,7 @@ def record_malloc_with_realtime(df, savepath):
     plt.close(fig)
 
 # save the picture shows that absolute/relative hit time and lifetime of all objs alloed from this malloc
-def record_malloc(df_abs, df_lifetime, df_rel, per_caller_info, long_lifetime_propotion, cold_score, savepath):
+def record_malloc(df_abs, df_lifetime, df_rel, per_caller_info, long_lifetime_propotion, is_cold, cold_score, savepath):
     global alloc_type_mapping
     
     fig, axs = plt.subplots(1, 3, figsize=(17, 7), gridspec_kw={'bottom': 0.3, 'top': 0.9}) # bottom and top is percentage 
@@ -386,12 +386,16 @@ def record_malloc(df_abs, df_lifetime, df_rel, per_caller_info, long_lifetime_pr
     
     # add some information to picture
     alloc_type = alloc_type_mapping[df_lifetime["alloc_type"].iloc[0]]
-    if cold_score != -1:
+    if is_cold:
         temperature = "cold"
         cold_score_text = str(cold_score * 100) + "%"
     else:
-        temperature = "other"
-        cold_score_text = "None"
+        if cold_score == -1:
+            temperature = "other"
+            cold_score_text = "None"
+        else:
+            temperature = "other"
+            cold_score_text = str(cold_score * 100) + "%"
 
     malloc_info = "alloc information (type: "+  alloc_type + ")" + " (temperature: " + temperature + ")"\
         + "\n" + "|  malloc address : " + per_caller_info["caller_addr_str"].to_string(index=False) \
@@ -399,7 +403,7 @@ def record_malloc(df_abs, df_lifetime, df_rel, per_caller_info, long_lifetime_pr
         + "\n" + "|  Size of All Allocated Spaces by this malloc: " + per_caller_info["total_alloc_size"].to_string(index=False) \
         + "\n" + "|  Number of Objects Allocated by this malloc : " + per_caller_info["count_of_objs"].to_string(index=False) \
         + "\n" + f"|  Propotion of Long Lifetime Objects (lifetime >= {LIFE_TIME_THRESHOLD}s) : " + str(long_lifetime_propotion * 100) + "%" \
-        + "\n" + f"|  Propotion of hit at percentage of lifetime between ({HIT_LIFETIME_PERCENTAGE_BOUND[0] * 100}%, {HIT_LIFETIME_PERCENTAGE_BOUND[1] * 100}%) : " + cold_score_text
+        + "\n" + f"|  Propotion of hit at percentage of lifetime between ({HIT_LIFETIME_PERCENTAGE_BOUND[0]}%, {HIT_LIFETIME_PERCENTAGE_BOUND[1]}%) : " + cold_score_text
     
     fig.text(0.2, 0.2,  malloc_info, ha='left', va='top', fontsize=10, color='blue')
     #fig.text(0.6, 0.2, other_info, ha='left', va='top', fontsize=10, color='blue')
@@ -625,6 +629,8 @@ def is_cold_malloc(df_rel, filter_flag):
         hit_lifetime_bound_propotion = count / len(df_rel["hit_relative_time"])
         if hit_lifetime_bound_propotion < HIT_LIFETIME_BOUND_PROPOTION_THRESHOLD:
             return [True, hit_lifetime_bound_propotion]
+        else:
+            return [False, hit_lifetime_bound_propotion]
         
         """ 
         # can't work because of some objs are always hit
@@ -836,7 +842,7 @@ def main():
                     allocs_temper[caller_addr] = "other"
 
                 record_malloc(df[mask2], df_myaf[mask3], df[mask & mask2], per_caller_info, 
-                              long_lifetime_propotion, cold_score, savepath)
+                              long_lifetime_propotion, is_cold, cold_score, savepath)
 
                 classify_image(sampled_dir_path, picture_name, filter_dir_path, filter_flag)
                 classify_image(sampled_dir_path, picture_name, coldmalloc_dir_path, is_cold)
