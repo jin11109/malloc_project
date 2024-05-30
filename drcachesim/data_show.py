@@ -716,13 +716,19 @@ def main():
             "sizesum": "total_alloc_size"
         })
 
+        # these dirs are used to sort result image
+        unsampled_dir_path = "./result_picture/" + str(pid) + "unsampled"
+        sampled_dir_path = "./result_picture/" + str(pid)
+        filter_dir_path = "./result_picture/" + str(pid) + "filter"
+        coldmalloc_dir_path = "./result_picture/" + str(pid) + "cold"
+        dir_paths = [unsampled_dir_path, sampled_dir_path, filter_dir_path, coldmalloc_dir_path]
+        for dir_path in dir_paths:
+            if not Path(dir_path).exists():
+                os.makedirs(dir_path)
+
         # In this pid, if all the objects alloced from some malloc have no any event(cachemiss)
         # then we output some picture with the information for these mallocs and these mallocs'obj  
         if fileresult_unsampled_names.get(pid) is not None:
-            # put result picture into this dir
-            dir_path = "./result_picture/" + str(pid) + "noevent"
-            if not Path(dir_path).exists():
-                os.makedirs(dir_path)
             
             df_not = pd.read_csv(fileresult_unsampled_names[pid], dtype=dtype)
             df_not = pd.DataFrame(df_not)
@@ -736,7 +742,7 @@ def main():
             for caller_addr in df_not["caller_addr"]:
                 print("no event", index, hex(caller_addr))
                 mask = df_myaf["caller_addr"] == caller_addr
-                record_objs_with_no_event(df_myaf[mask], dir_path + "/" + str(index) + "_" + str(hex(caller_addr)))
+                record_objs_with_no_event(df_myaf[mask], unsampled_dir_path + "/" + str(index) + "_" + str(hex(caller_addr)))
                 allocs_temper[caller_addr] = "unsampled"
                 index += 1
         
@@ -786,17 +792,6 @@ def main():
             allocs_info.classify["sampled"].total_hits = len(df)
             print(str(pid) + " sample num : ", allocs_info.classify["sampled"].count)
 
-            # put result picture into this dir
-            dir_path = "./result_picture/" + str(pid)
-            if not Path(dir_path).exists():
-                os.makedirs(dir_path)
-            filter_dir_path = "./result_picture/" + str(pid) + "filter"
-            if not Path(filter_dir_path).exists():
-                os.makedirs(filter_dir_path)
-            coldmalloc_dir_path = "./result_picture/" + str(pid) + "cold"
-            if not Path(coldmalloc_dir_path).exists():
-                os.makedirs(coldmalloc_dir_path)
-
             # make pictures with every malloc address 
             for i in range(allocs_info.classify["sampled"].count):
                 per_caller_info = indicate.iloc[i:i + 1, :]
@@ -820,15 +815,15 @@ def main():
 
                 # get savepath
                 picture_name = re.sub(r'\s+', '_', per_caller_info["caller_addr_str"].to_string())
-                savepath = dir_path + "/" + picture_name
+                savepath = sampled_dir_path + "/" + picture_name
 
                 # get interval data or processing data
                 interval_data = {}
                 if args.just_filter_malloc:
-                    all_data = os.listdir(dir_path)
+                    all_data = os.listdir(sampled_dir_path)
                     for data in all_data:
                         if "interval_data" in data and picture_name in data and data.endswith(".json"):
-                            with open(dir_path + '/' + data, 'r') as file:
+                            with open(sampled_dir_path + '/' + data, 'r') as file:
                                 interval_data = json.load(file)
                 else:
                     statistics(df[mask2], df_myaf[mask3], filter_flag, savepath, interval_data)
@@ -843,14 +838,22 @@ def main():
                 record_malloc(df[mask2], df_myaf[mask3], df[mask & mask2], per_caller_info, 
                               long_lifetime_propotion, cold_score, savepath)
 
-                classify_image(dir_path, picture_name, filter_dir_path, filter_flag)
-                classify_image(dir_path, picture_name, coldmalloc_dir_path, is_cold)
+                classify_image(sampled_dir_path, picture_name, filter_dir_path, filter_flag)
+                classify_image(sampled_dir_path, picture_name, coldmalloc_dir_path, is_cold)
 
                 # calculate DTW
                 #DTW(df[mask2], dir_path + "/" + picture_name, per_caller_info) 
 
         update_allocs_info(allocs_info, allocs_temper, df_myaf_total_size)
         record_mallocs(allocs_info, coldmalloc_dir_path + "/all_allocs")
+
+        # remove the empty dir
+        for dir_path in dir_paths:
+            try:
+                os.rmdir(dir_path)
+            except:
+                None
+
 
 if __name__ == "__main__":
     # Turn off the automatic using scientific notation at axis lable
