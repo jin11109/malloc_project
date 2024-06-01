@@ -10,6 +10,6 @@ for data in all_data:
         result.append((int(output[0]), output[1]))
         
 result.sort()
-print("pid,alloc_index_in_drcachesim,alloc_addr_in_drcachesim,alloc_addr_real")
+print("pid_in_drcachesim,pid_real,alloc_index_in_drcachesim,alloc_addr_in_drcachesim,alloc_addr_real,alloc_index_real,temperature,mark")
 for i in result:        
     print(f'{i[0]},{i[1]},')
