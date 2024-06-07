@@ -80,9 +80,14 @@ def record_allocs(allocs_info):
     titles = []
     data = []
 
+    count_alloc_sum = allocs_info.count_alloc_sum()
     total_alloc_size_sum = allocs_info.total_alloc_size_sum()
     lifetime_objsize_product_sum = allocs_info.lifetime_objsize_product_sum()
     for classification in classifications:
+        data.append(allocs_info.classify[classification].count / count_alloc_sum * 100)
+        titles.append("count of allocs")
+        labels.append(classification)
+
         data.append(allocs_info.classify[classification].total_alloc_size / total_alloc_size_sum * 100)
         titles.append("total alloc size")
         labels.append(classification)
@@ -99,6 +104,7 @@ def record_allocs(allocs_info):
         axs[0].bar_label(container, labels=labels)
 
     mallocs_info = f"allocs information (pid : {allocs_info.pid})"\
+        + "\n" + "|  count of allocs : " + f"cold({allocs_info.classify['cold'].count}),  unsampled({allocs_info.classify['unsampled'].count}),  other({allocs_info.classify['other'].count})" \
         + "\n" + "|  total alloc size : " + f"cold({allocs_info.classify['cold'].total_alloc_size}),  unsampled({allocs_info.classify['unsampled'].total_alloc_size}),  other({allocs_info.classify['other'].total_alloc_size})" \
         + "\n" + "|  production of lifetime and objs size : " + f"cold({allocs_info.classify['cold'].lifetime_objsize_product:.2f}),  unsampled({allocs_info.classify['unsampled'].lifetime_objsize_product:.2f}),  other({allocs_info.classify['other'].lifetime_objsize_product:.2f})" 
     
@@ -131,6 +137,7 @@ def main():
         df_myaf = df_myaf.rename(columns={"generation": "lifetime"})
         df_myaf["lifetime_objsize_product"] = df_myaf["lifetime"].clip(lower=0) * df_myaf["size"]
 
+        total_alloc = len(df_myaf.groupby("caller_addr", as_index=False))
         total_lifetime_objsize_product = df_myaf["lifetime_objsize_product"].sum()
         total_alloc_size = df_myaf["size"].sum()
 
@@ -143,16 +150,21 @@ def main():
         # record "cold" information
         df_cold = df_myaf.copy()
         df_cold = df_cold[temper_cold_mask2]
+        allocs_info.classify["cold"].count = len(df_cold.groupby("caller_addr", as_index=False))
         allocs_info.classify["cold"].lifetime_objsize_product = df_cold["lifetime_objsize_product"].sum()
         allocs_info.classify["cold"].total_alloc_size = df_cold["size"].sum()
 
         # record "unsampled" information
         df_unsampled = df_myaf.copy()
         df_unsampled = df_unsampled[temper_unsampled_mask2]
+        allocs_info.classify["unsampled"].count = len(df_unsampled.groupby("caller_addr", as_index=False))
         allocs_info.classify["unsampled"].lifetime_objsize_product = df_unsampled["lifetime_objsize_product"].sum()
         allocs_info.classify["unsampled"].total_alloc_size = df_unsampled["size"].sum()
 
         # record "other" information
+        allocs_info.classify["other"].count = total_alloc \
+            - allocs_info.classify["unsampled"].count \
+            - allocs_info.classify["cold"].count
         allocs_info.classify["other"].lifetime_objsize_product = total_lifetime_objsize_product \
             - allocs_info.classify["unsampled"].lifetime_objsize_product \
             - allocs_info.classify["cold"].lifetime_objsize_product
