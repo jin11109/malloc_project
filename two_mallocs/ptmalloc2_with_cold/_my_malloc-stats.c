@@ -65,7 +65,7 @@
 
 #endif
 
-#include "malloc.h"
+#include "_my_malloc.h"
 
 /*
   Define HAVE_MMAP as true to optionally make malloc() use mmap() to

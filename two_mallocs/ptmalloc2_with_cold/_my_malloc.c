@@ -550,7 +550,7 @@ Void_t *(*__morecore)(ptrdiff_t) = __default_morecore;
 # define ptmalloc_unlock_all2 _my_ptmalloc_unlock_all2
 # define _environ             _my__environ
 # define next_env_entry       _my_next_env_entry
-# define tmalloc_init_minimal _my_tmalloc_init_minimal
+# define ptmalloc_init_minimal _my_ptmalloc_init_minimal
 # define ptmalloc_init        _my_ptmalloc_init
 //# define thread_atfork_static _my_thread_atfork_static
 # define dump_heap            _my_dump_heap
@@ -579,6 +579,64 @@ Void_t *(*__morecore)(ptrdiff_t) = __default_morecore;
 # define malloc_starter         _my_malloc_starter
 # define malloc_save_state      _my_malloc_save_state
 
+/* define rename symbols from malloc.c */
+# define malloc_chunk               _my_malloc_chunk
+# define mchunkptr                  _my_mchunkptr
+# define _int_malloc                _my__int_malloc
+# define _int_free                  _my__int_free
+# define _int_realloc               _my__int_realloc
+# define _int_memalign              _my__int_memalign
+# define _int_valloc                _my__int_valloc
+# define _int_pvalloc               _my__int_pvalloc
+# define _int_icalloc               _my__int_icalloc
+# define _int_icomalloc             _my__int_icomalloc
+# define mTRIm                      _my_mTRIm
+# define mUSABLe                    _my_mUSABLe
+# define mALLOPt                    _my_mALLOPt
+# define mem2mem_check              _my_mem2mem_check
+# define top_check                  _my_top_check
+# define munmap_chunk               _my_munmap_chunk
+# define mremap_chunk               _my_mremap_chunk
+# define malloc_check               _my_malloc_check
+# define free_check                 _my_free_check
+# define realloc_check              _my_realloc_check
+# define memalign_check             _my_memalign_check
+# define malloc_starter             _my_malloc_starter
+# define memalign_starter           _my_memalign_starter
+# define free_starter               _my_free_starter
+# define malloc_atfork              _my_malloc_atfork
+# define free_atfork                _my_free_atfork
+# define mbinptr                    _my_mbinptr
+# define mfastbinptr                _my_mfastbinptr
+# define malloc_state               _my_malloc_state
+# define malloc_par                 _my_malloc_par
+# define main_arena                 _my_main_arena
+# define mp_                        _my_mp_
+# define malloc_init_state          _my_malloc_init_state
+# define sYSMALLOc                  _my_sYSMALLOc
+# define sYSTRIm                    _my_sYSTRIm
+# define malloc_consolidate         _my_malloc_consolidate
+# define iALLOc                     _my_iALLOc
+# define malloc_hook_ini            _my_malloc_hook_ini
+# define realloc_hook_ini           _my_realloc_hook_ini
+# define memalign_hook_ini          _my_memalign_hook_ini
+# define __malloc_initialize_hook   _my___malloc_initialize_hook
+# define __free_hook                _my___free_hook
+# define __malloc_hook              _my___malloc_hook
+# define __realloc_hook             _my___realloc_hook
+# define __memalign_hook            _my___memalign_hook
+# define __after_morecore_hook      _my___after_morecore_hook
+# define do_check_chunk             _my_do_check_chunk
+# define do_check_free_chunk        _my_do_check_free_chunk
+# define do_check_inuse_chunk       _my_do_check_inuse_chunk
+# define do_check_remalloced_chunk  _my_do_check_remalloced_chunk
+# define do_check_malloced_chunk    _my_do_check_malloced_chunk
+# define do_check_malloc_state      _my_do_check_malloc_state
+# define munmap_chunk               _my_munmap_chunk
+# define mremap_chunk               _my_mremap_chunk
+# define malloc_consolidate         _my_malloc_consolidate
+# define _int_get_arena_info        _my__int_get_arena_info
+# define _int_get_global_info       _my__int_get_global_info
 
 
 #else /* !_LIBC */
@@ -1593,7 +1651,7 @@ int      __posix_memalign(void **, size_t, size_t);
 } /* end of extern "C" */
 #endif
 
-#include "malloc.h"
+#include "_my_malloc.h"
 
 #ifndef BOUNDED_N
 #define BOUNDED_N(ptr, sz) (ptr)
@@ -2479,7 +2537,7 @@ void weak_variable (*__after_morecore_hook) __MALLOC_P ((void)) = NULL;
 
 
 /* ------------------- Support for multiple arenas -------------------- */
-#include "arena.c"
+#include "_my_arena.c"
 
 /*
   Debugging support
@@ -2835,7 +2893,7 @@ static void do_check_malloc_state(mstate av)
 
 
 /* ----------------- Support for debugging hooks -------------------- */
-#include "hooks.c"
+#include "_my_hooks.c"
 
 
 /* ----------- Routines dealing with system allocation -------------- */
@@ -5521,13 +5579,13 @@ __posix_memalign (void **memptr, size_t alignment, size_t size)
 }
 weak_alias (__posix_memalign, posix_memalign)
 
-strong_alias (__libc_calloc, __calloc) weak_alias (__libc_calloc, mycalloc)
+strong_alias (__libc_calloc, __calloc) weak_alias (__libc_calloc, calloc)
 strong_alias (__libc_free, __cfree) weak_alias (__libc_free, cfree)
-strong_alias (__libc_free, __free) strong_alias (__libc_free, myfree)
-strong_alias (__libc_malloc, __malloc) strong_alias (__libc_malloc, mymalloc)
+strong_alias (__libc_free, __free) strong_alias (__libc_free, free)
+strong_alias (__libc_malloc, __malloc) strong_alias (__libc_malloc, malloc)
 strong_alias (__libc_memalign, __memalign)
 weak_alias (__libc_memalign, memalign)
-strong_alias (__libc_realloc, __realloc) strong_alias (__libc_realloc, myrealloc)
+strong_alias (__libc_realloc, __realloc) strong_alias (__libc_realloc, realloc)
 strong_alias (__libc_valloc, __valloc) weak_alias (__libc_valloc, valloc)
 strong_alias (__libc_pvalloc, __pvalloc) weak_alias (__libc_pvalloc, pvalloc)
 strong_alias (__libc_mallinfo, __mallinfo)

@@ -1,8 +1,8 @@
 # Makefile for ptmalloc, version 2
 # by Wolfram Gloger 1996-1999, 2001, 2002, 2003, 2004, 2006
 
-DIST_FILES0 = ChangeLog malloc.h malloc.c arena.c hooks.c \
- malloc-stats.c \
+DIST_FILES0 = ChangeLog _my_malloc.h _my_malloc.c _my_arena.c _my_hooks.c \
+ _my_malloc-stats.c \
  sysdeps \
  tst-mallocstate.c tst-mstats.c
 DIST_FILES1 = COPYRIGHT README Makefile \
@@ -56,10 +56,10 @@ CFLAGS = $(SYS_FLAGS) $(OPT_FLAGS) $(WARN_FLAGS) $(THR_FLAGS) $(INC_FLAGS) $(MYP
 
 all: $(LIB_MALLOC) $(TESTS)
 
-malloc.o: malloc.c malloc.h
+malloc.o: _my_malloc.c _my_malloc.h
 	$(CC) -c $(CFLAGS) $(M_FLAGS) $<
 
-malloc-stats.o: malloc-stats.c malloc.h
+malloc-stats.o: _my_malloc-stats.c _my_malloc.h
 	$(CC) -c $(CFLAGS) $(M_FLAGS) $<
 
 libmalloc.a: $(MALLOC_OBJ)
@@ -68,8 +68,8 @@ libmalloc.a: $(MALLOC_OBJ)
 
 shared: libptmalloc2_with_cold.so
 
-libptmalloc2_with_cold.so: malloc.c malloc-stats.c malloc.h
-	$(CC) $(SH_FLAGS) $(CFLAGS) $(M_FLAGS) malloc.c malloc-stats.c -o $@
+libptmalloc2_with_cold.so: _my_malloc.c _my_malloc-stats.c _my_malloc.h
+	$(CC) $(SH_FLAGS) $(CFLAGS) $(M_FLAGS) _my_malloc.c _my_malloc-stats.c -o $@
 
 again:
 	$(RM) $(TESTS)
@@ -218,4 +218,4 @@ dist-glibc: Makefile.glibc.diff
 	 gzip -9 >../libc.malloc.tar.gz
 
 # dependencies
-malloc.o: arena.c hooks.c
+malloc.o: _my_arena.c _my_hooks.c
