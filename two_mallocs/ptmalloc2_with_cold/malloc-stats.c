@@ -24,6 +24,47 @@
 
 #include <malloc-machine.h>
 
+#ifdef USE_MY_PREFIX
+/* define rename symbols from malloc.h */
+# define __malloc_initialized       _my___malloc_initialized
+# define malloc                     _my_malloc
+# define calloc                     _my_calloc
+# define realloc                    _my_realloc
+# define free                       _my_free
+# define cfree                      _my_cfree
+# define memalign                   _my_memalign
+# define valloc                     _my_valloc
+# define pvalloc                    _my_pvalloc
+# define __morecore                 _my___morecore
+# define __default_morecore         _my___default_morecore
+# define mallinfo                   _my_mallinfo
+# define mallopt                    _my_mallopt
+# define malloc_trim                _my_malloc_trim
+# define malloc_usable_size         _my_malloc_usable_size
+# define malloc_stats               _my_malloc_stats
+# define malloc_get_state           _my_malloc_get_state
+# define __malloc_initialize_hook   _my___malloc_initialize_hook
+# define __free_hook                _my___free_hook
+# define __malloc_hook              _my___malloc_hook
+# define __realloc_hook             _my___realloc_hook
+# define __memalign_hook            _my___memalign_hook
+# define __after_morecore_hook      _my___after_morecore_hook
+# define __malloc_check_init        _my___malloc_check_init
+# define malloc_state               _my_malloc_state
+# define mstate                     _my_mstate
+# define _int_new_arena             _my__int_new_arena
+# define _int_malloc                _my__int_malloc
+# define _int_free                  _my__int_free
+# define _int_realloc               _my__int_realloc
+# define _int_memalign              _my__int_memalign
+# define _int_get_arena             _my__int_get_arena
+# define malloc_arena_info          _my_malloc_arena_info
+# define malloc_global_info         _my_malloc_global_info
+# define _int_get_arena_info        _my__int_get_arena_info
+# define _int_get_global_info       _my__int_get_global_info
+
+#endif
+
 #include "malloc.h"
 
 /*

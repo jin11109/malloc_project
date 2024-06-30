@@ -35,6 +35,9 @@ M_FLAGS   = -DTHREAD_STATS=1 #-DMALLOC_DEBUG=1
 THR_FLAGS = -DUSE_TSD_DATA_HACK -D_REENTRANT
 THR_LIBS  = -lpthread
 
+# My prefix flag
+MYPREFIX_FLAG = -DUSE_ARENAS=1 -DUSE_MY_PREFIX
+
 RM        = rm -f
 AR        = ar
 RANLIB    = ranlib
@@ -46,7 +49,7 @@ T_SUF =
 TESTS = t-test1$(T_SUF) t-test2$(T_SUF) \
         tst-mallocstate$(T_SUF) tst-mstats$(T_SUF)
 
-CFLAGS = $(SYS_FLAGS) $(OPT_FLAGS) $(WARN_FLAGS) $(THR_FLAGS) $(INC_FLAGS)
+CFLAGS = $(SYS_FLAGS) $(OPT_FLAGS) $(WARN_FLAGS) $(THR_FLAGS) $(INC_FLAGS) $(MYPREFIX_FLAG)
 
 .c.o:
 	$(CC) -c $(CFLAGS) $<

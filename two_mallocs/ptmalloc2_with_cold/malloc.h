@@ -123,46 +123,46 @@ extern "C" {
 extern int __malloc_initialized;
 
 /* Allocate SIZE bytes of memory.  */
-extern __malloc_ptr_t malloc __MALLOC_P ((size_t __size)) __attribute_malloc__;
+extern __malloc_ptr_t _my_malloc __MALLOC_P ((size_t __size)) __attribute_malloc__;
 
 /* Allocate NMEMB elements of SIZE bytes each, all initialized to 0.  */
-extern __malloc_ptr_t calloc __MALLOC_P ((size_t __nmemb, size_t __size))
+extern __malloc_ptr_t _my_calloc __MALLOC_P ((size_t __nmemb, size_t __size))
        __attribute_malloc__;
 
 /* Re-allocate the previously allocated block in __ptr, making the new
    block SIZE bytes long.  */
-extern __malloc_ptr_t realloc __MALLOC_P ((__malloc_ptr_t __ptr,
+extern __malloc_ptr_t _my_realloc __MALLOC_P ((__malloc_ptr_t __ptr,
 					   size_t __size))
        __attribute_malloc__;
 
 /* Free a block allocated by `malloc', `realloc' or `calloc'.  */
-extern void free __MALLOC_P ((__malloc_ptr_t __ptr));
+extern void _my_free __MALLOC_P ((__malloc_ptr_t __ptr));
 
 /* Free a block allocated by `calloc'. */
-extern void cfree __MALLOC_P ((__malloc_ptr_t __ptr));
+extern void _my_cfree __MALLOC_P ((__malloc_ptr_t __ptr));
 
 /* Allocate SIZE bytes allocated to ALIGNMENT bytes.  */
-extern __malloc_ptr_t memalign __MALLOC_P ((size_t __alignment, size_t __size));
+extern __malloc_ptr_t _my_memalign __MALLOC_P ((size_t __alignment, size_t __size));
 
 /* Allocate SIZE bytes on a page boundary.  */
-extern __malloc_ptr_t valloc __MALLOC_P ((size_t __size)) __attribute_malloc__;
+extern __malloc_ptr_t _my_valloc __MALLOC_P ((size_t __size)) __attribute_malloc__;
 
 /* Equivalent to valloc(minimum-page-that-holds(n)), that is, round up
    __size to nearest pagesize. */
-extern __malloc_ptr_t  pvalloc __MALLOC_P ((size_t __size))
+extern __malloc_ptr_t  _my_pvalloc __MALLOC_P ((size_t __size))
        __attribute_malloc__;
 
 /* Underlying allocation function; successive calls should return
    contiguous pieces of memory.  */
-extern __malloc_ptr_t (*__morecore) __MALLOC_PMT ((ptrdiff_t __size));
+extern __malloc_ptr_t (*_my___morecore) __MALLOC_PMT ((ptrdiff_t __size));
 
 /* Default value of `__morecore'.  */
-extern __malloc_ptr_t __default_morecore __MALLOC_P ((ptrdiff_t __size))
+extern __malloc_ptr_t _my___default_morecore __MALLOC_P ((ptrdiff_t __size))
        __attribute_malloc__;
 
 /* SVID2/XPG mallinfo structure */
 
-struct mallinfo {
+struct _my_mallinfo {
   int arena;    /* non-mmapped space allocated from system */
   int ordblks;  /* number of free chunks */
   int smblks;   /* number of fastbin blocks */
@@ -176,7 +176,7 @@ struct mallinfo {
 };
 
 /* Returns a copy of the updated current mallinfo. */
-extern struct mallinfo mallinfo __MALLOC_P ((void));
+extern struct _my_mallinfo _my_mallinfo __MALLOC_P ((void));
 
 /* SVID2/XPG mallopt options */
 #ifndef M_MXFAST
@@ -200,65 +200,65 @@ extern struct mallinfo mallinfo __MALLOC_P ((void));
 #define M_CHECK_ACTION      -5
 
 /* General SVID/XPG interface to tunable parameters. */
-extern int mallopt __MALLOC_P ((int __param, int __val));
+extern int _my_mallopt __MALLOC_P ((int __param, int __val));
 
 /* Release all but __pad bytes of freed top-most memory back to the
    system. Return 1 if successful, else 0. */
-extern int malloc_trim __MALLOC_P ((size_t __pad));
+extern int _my_malloc_trim __MALLOC_P ((size_t __pad));
 
 /* Report the number of usable allocated bytes associated with allocated
    chunk __ptr. */
-extern size_t malloc_usable_size __MALLOC_P ((__malloc_ptr_t __ptr));
+extern size_t _my_malloc_usable_size __MALLOC_P ((__malloc_ptr_t __ptr));
 
 /* Prints brief summary statistics on stderr. */
-extern void malloc_stats __MALLOC_P ((void));
+extern void _my_malloc_stats __MALLOC_P ((void));
 
 /* Record the state of all malloc variables in an opaque data structure. */
-extern __malloc_ptr_t malloc_get_state __MALLOC_P ((void));
+extern __malloc_ptr_t _my_malloc_get_state __MALLOC_P ((void));
 
 /* Restore the state of all malloc variables from data obtained with
    malloc_get_state(). */
-extern int malloc_set_state __MALLOC_P ((__malloc_ptr_t __ptr));
+extern int _my_malloc_set_state __MALLOC_P ((__malloc_ptr_t __ptr));
 
 /* Called once when malloc is initialized; redefining this variable in
    the application provides the preferred way to set up the hook
    pointers. */
-extern void (*__malloc_initialize_hook) __MALLOC_PMT ((void));
+extern void (*_my___malloc_initialize_hook) __MALLOC_PMT ((void));
 /* Hooks for debugging and user-defined versions. */
-extern void (*__free_hook) __MALLOC_PMT ((__malloc_ptr_t __ptr,
+extern void (*_my___free_hook) __MALLOC_PMT ((__malloc_ptr_t __ptr,
 					__const __malloc_ptr_t));
-extern __malloc_ptr_t (*__malloc_hook) __MALLOC_PMT ((size_t __size,
+extern __malloc_ptr_t (*_my___malloc_hook) __MALLOC_PMT ((size_t __size,
 						    __const __malloc_ptr_t));
-extern __malloc_ptr_t (*__realloc_hook) __MALLOC_PMT ((__malloc_ptr_t __ptr,
+extern __malloc_ptr_t (*_my___realloc_hook) __MALLOC_PMT ((__malloc_ptr_t __ptr,
 						     size_t __size,
 						     __const __malloc_ptr_t));
-extern __malloc_ptr_t (*__memalign_hook) __MALLOC_PMT ((size_t __alignment,
+extern __malloc_ptr_t (*_my___memalign_hook) __MALLOC_PMT ((size_t __alignment,
 						      size_t __size,
 						      __const __malloc_ptr_t));
-extern void (*__after_morecore_hook) __MALLOC_PMT ((void));
+extern void (*_my___after_morecore_hook) __MALLOC_PMT ((void));
 
 /* Activate a standard set of debugging hooks. */
-extern void __malloc_check_init __MALLOC_P ((void));
+extern void _my___malloc_check_init __MALLOC_P ((void));
 
 /* Internal routines, operating on "arenas".  */
-struct malloc_state;
-typedef struct malloc_state *mstate;
+struct _my_malloc_state;
+typedef struct _my_malloc_state *_my_mstate;
 
-extern mstate         _int_new_arena __MALLOC_P ((size_t __ini_size));
-extern __malloc_ptr_t _int_malloc __MALLOC_P ((mstate __m, size_t __size));
-extern void           _int_free __MALLOC_P ((mstate __m, __malloc_ptr_t __ptr));
-extern __malloc_ptr_t _int_realloc __MALLOC_P ((mstate __m,
+extern _my_mstate         _my__int_new_arena __MALLOC_P ((size_t __ini_size));
+extern __malloc_ptr_t _my__int_malloc __MALLOC_P ((_my_mstate __m, size_t __size));
+extern void           _my__int_free __MALLOC_P ((_my_mstate __m, __malloc_ptr_t __ptr));
+extern __malloc_ptr_t _my__int_realloc __MALLOC_P ((_my_mstate __m,
 						__malloc_ptr_t __ptr,
 						size_t __size));
-extern __malloc_ptr_t _int_memalign __MALLOC_P ((mstate __m, size_t __alignment,
+extern __malloc_ptr_t _my__int_memalign __MALLOC_P ((_my_mstate __m, size_t __alignment,
 						 size_t __size));
 /* Return arena number __n, or 0 if out of bounds.  Arena 0 is the
    main arena.  */
-extern mstate         _int_get_arena __MALLOC_P ((int __n));
+extern _my_mstate         _my__int_get_arena __MALLOC_P ((int __n));
 
 /* Implementation-specific mallinfo.  More detailed than mallinfo, and
    also works for size_t wider than int.  */
-struct malloc_arena_info {
+struct _my_malloc_arena_info {
     int    nfastblocks;    /* number of freed "fastchunks" */
     int    nbinblocks;     /* number of available chunks in bins */
     size_t fastavail;      /* total space in freed "fastchunks" */
@@ -271,7 +271,7 @@ struct malloc_arena_info {
     long   stat_lock_direct, stat_lock_loop, stat_lock_wait;
 };
 
-struct malloc_global_info {
+struct _my_malloc_global_info {
     int    n_mmaps;         /* number of mmap'ed chunks */
     int    max_n_mmaps;     /* max. number of mmap'ed chunks reached */
     size_t mmapped_mem;     /* total bytes allocated in mmap'ed chunks */
@@ -280,9 +280,9 @@ struct malloc_global_info {
     int    stat_n_heaps;    /* only kept if THREAD_STATS is defined */
 };
 
-extern void _int_get_arena_info __MALLOC_P ((mstate __m,
-					     struct malloc_arena_info *__ma));
-extern void _int_get_global_info __MALLOC_P ((struct malloc_global_info *__m));
+extern void _my__int_get_arena_info __MALLOC_P ((_my_mstate __m,
+					     struct _my_malloc_arena_info *__ma));
+extern void _my__int_get_global_info __MALLOC_P ((struct _my_malloc_global_info *__m));
 
 #ifdef __cplusplus
 } /* end of extern "C" */

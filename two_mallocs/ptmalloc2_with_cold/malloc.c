@@ -471,6 +471,116 @@ extern "C" {
 Void_t * __default_morecore (ptrdiff_t);
 Void_t *(*__morecore)(ptrdiff_t) = __default_morecore;
 
+#else
+#ifdef USE_MY_PREFIX
+/* We will rename all the symbols to allow exist two mallocs at the same time */
+
+#define public_cALLOc    _my_calloc
+#define public_fREe      _my_free
+#define public_cFREe     _my_cfree
+#define public_mALLOc    _my_malloc
+#define public_mEMALIGn  _my_memalign
+#define public_rEALLOc   _my_realloc
+#define public_vALLOc    _my_valloc
+#define public_pVALLOc   _my_pvalloc
+#define public_mALLINFo  _my_mallinfo
+#define public_mALLOPt   _my_mallopt
+#define public_mTRIm     _my_malloc_trim
+#define public_mSTATs    _my_malloc_stats
+#define public_mUSABLe   _my_malloc_usable_size
+#define public_iCALLOc   _my_independent_calloc
+#define public_iCOMALLOc _my_independent_comalloc
+#define public_gET_STATe _my_get_state
+#define public_sET_STATe _my_set_state
+
+/* define rename symbols from malloc.h */
+# define __malloc_initialized       _my___malloc_initialized
+# define malloc                     _my_malloc
+# define calloc                     _my_calloc
+# define realloc                    _my_realloc
+# define free                       _my_free
+# define cfree                      _my_cfree
+# define memalign                   _my_memalign
+# define valloc                     _my_valloc
+# define pvalloc                    _my_pvalloc
+# define __morecore                 _my___morecore
+# define __default_morecore         _my___default_morecore
+# define mallinfo                   _my_mallinfo
+# define mallopt                    _my_mallopt
+# define malloc_trim                _my_malloc_trim
+# define malloc_usable_size         _my_malloc_usable_size
+# define malloc_stats               _my_malloc_stats
+# define malloc_get_state           _my_malloc_get_state
+# define __malloc_initialize_hook   _my___malloc_initialize_hook
+# define __free_hook                _my___free_hook
+# define __malloc_hook              _my___malloc_hook
+# define __realloc_hook             _my___realloc_hook
+# define __memalign_hook            _my___memalign_hook
+# define __after_morecore_hook      _my___after_morecore_hook
+# define __malloc_check_init        _my___malloc_check_init
+# define malloc_state               _my_malloc_state
+# define mstate                     _my_mstate
+# define _int_new_arena             _my__int_new_arena
+# define _int_malloc                _my__int_malloc
+# define _int_free                  _my__int_free
+# define _int_realloc               _my__int_realloc
+# define _int_memalign              _my__int_memalign
+# define _int_get_arena             _my__int_get_arena
+# define malloc_arena_info          _my_malloc_arena_info
+# define malloc_global_info         _my_malloc_global_info
+# define _int_get_arena_info        _my__int_get_arena_info
+# define _int_get_global_info       _my__int_get_global_info
+
+/* define rename symbols from arena.c */
+# define _heap_info           _my__heap_info
+# define heap_info            _my_heap_info
+# define arena_key            _my_arena_key
+# define list_lock            _my_list_lock
+# define stat_n_heaps         _my_stat_n_heaps
+# define arena_mem            _my_arena_mem
+# define __malloc_initialized _my___malloc_initialized
+# define save_malloc_hook     _my_save_malloc_hook
+# define save_memalign_hook   _my_save_memalign_hook
+# define save_free_hook       _my_save_free_hook
+# define save_arena           _my_save_arena
+# define malloc_atfork        _my_malloc_atfork
+# define free_atfork          _my_free_atfork
+# define ptmalloc_lock_all    _my_ptmalloc_lock_all
+# define ptmalloc_unlock_all  _my_ptmalloc_unlock_all
+# define ptmalloc_unlock_all2 _my_ptmalloc_unlock_all2
+# define _environ             _my__environ
+# define next_env_entry       _my_next_env_entry
+# define tmalloc_init_minimal _my_tmalloc_init_minimal
+# define ptmalloc_init        _my_ptmalloc_init
+//# define thread_atfork_static _my_thread_atfork_static
+# define dump_heap            _my_dump_heap
+# define new_heap             _my_new_heap
+# define grow_heap            _my_grow_heap
+# define heap_trim            _my_heap_trim
+# define arena_get2           _my_arena_get2
+# define _int_new_arena       _my__int_new_arena
+# define _int_get_arena       _my__int_get_arena
+
+/* define rename symbols from hook.c */
+# define malloc_hook_ini        _my_malloc_hook_ini
+# define realloc_hook_ini       _my_realloc_hook_ini
+# define memalign_hook_ini      _my_memalign_hook_ini
+# define check_action           _my_check_action
+# define using_malloc_checking  _my_using_malloc_checking
+# define disallow_malloc_check  _my_disallow_malloc_check
+# define __malloc_check_init    _my___malloc_check_init
+# define mem2mem_check          _my_mem2mem_check
+# define mem2chunk_check        _my_mem2chunk_check
+# define top_check              _my_top_check
+# define malloc_check           _my_malloc_check
+# define free_check             _my_free_check
+# define realloc_check          _my_realloc_check
+# define memalign_check         _my_memalign_check
+# define malloc_starter         _my_malloc_starter
+# define malloc_save_state      _my_malloc_save_state
+
+
+
 #else /* !_LIBC */
 #define public_cALLOc    calloc
 #define public_fREe      free
@@ -489,6 +599,8 @@ Void_t *(*__morecore)(ptrdiff_t) = __default_morecore;
 #define public_iCOMALLOc independent_comalloc
 #define public_gET_STATe malloc_get_state
 #define public_sET_STATe malloc_set_state
+
+#endif /* USE_MY_PREFIX */
 #endif /* _LIBC */
 #endif /* USE_DL_PREFIX */
 
@@ -3339,6 +3451,8 @@ public_mALLOc(size_t bytes)
   mstate ar_ptr;
   Void_t *victim;
 
+  //write(1, "test malloc\n", sizeof("test malloc\n"));
+
   __malloc_ptr_t (*hook) __MALLOC_P ((size_t, __const __malloc_ptr_t)) =
     __malloc_hook;
   if (hook != NULL)
@@ -3357,6 +3471,7 @@ public_mALLOc(size_t bytes)
       (void)mutex_unlock(&main_arena.mutex);
     } else {
 #if USE_ARENAS
+      write(2, "use arenas\n", sizeof("use arenas\n"));
       /* ... or sbrk() has failed and there is still a chance to mmap() */
       ar_ptr = arena_get2(ar_ptr->next ? ar_ptr : 0, bytes);
       (void)mutex_unlock(&main_arena.mutex);
@@ -5406,13 +5521,13 @@ __posix_memalign (void **memptr, size_t alignment, size_t size)
 }
 weak_alias (__posix_memalign, posix_memalign)
 
-strong_alias (__libc_calloc, __calloc) weak_alias (__libc_calloc, calloc)
+strong_alias (__libc_calloc, __calloc) weak_alias (__libc_calloc, mycalloc)
 strong_alias (__libc_free, __cfree) weak_alias (__libc_free, cfree)
-strong_alias (__libc_free, __free) strong_alias (__libc_free, free)
-strong_alias (__libc_malloc, __malloc) strong_alias (__libc_malloc, malloc)
+strong_alias (__libc_free, __free) strong_alias (__libc_free, myfree)
+strong_alias (__libc_malloc, __malloc) strong_alias (__libc_malloc, mymalloc)
 strong_alias (__libc_memalign, __memalign)
 weak_alias (__libc_memalign, memalign)
-strong_alias (__libc_realloc, __realloc) strong_alias (__libc_realloc, realloc)
+strong_alias (__libc_realloc, __realloc) strong_alias (__libc_realloc, myrealloc)
 strong_alias (__libc_valloc, __valloc) weak_alias (__libc_valloc, valloc)
 strong_alias (__libc_pvalloc, __pvalloc) weak_alias (__libc_pvalloc, pvalloc)
 strong_alias (__libc_mallinfo, __mallinfo)
