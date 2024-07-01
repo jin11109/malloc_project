@@ -92,7 +92,11 @@ int __malloc_initialized = -1;
   Void_t *vptr = NULL; \
   ptr = (mstate)tsd_getspecific(arena_key, vptr); \
   if(ptr && !mutex_trylock(&ptr->mutex)) { \
-    THREAD_STAT(++(ptr->stat_lock_direct)); \
+    if(ptr == &main_arena) {  \
+      write(2, "skip main arena\n", 17);  \
+      ptr = arena_get2(ptr, (size)); \
+    } else  \
+      THREAD_STAT(++(ptr->stat_lock_direct)); \
   } else \
     ptr = arena_get2(ptr, (size)); \
 } while(0)

@@ -3523,13 +3523,14 @@ public_mALLOc(size_t bytes)
   if(!victim) {
     /* Maybe the failure is due to running out of mmapped areas. */
     if(ar_ptr != &main_arena) {
+      /*
       (void)mutex_unlock(&ar_ptr->mutex);
       (void)mutex_lock(&main_arena.mutex);
       victim = _int_malloc(&main_arena, bytes);
       (void)mutex_unlock(&main_arena.mutex);
+      */
     } else {
 #if USE_ARENAS
-      write(2, "use arenas\n", sizeof("use arenas\n"));
       /* ... or sbrk() has failed and there is still a chance to mmap() */
       ar_ptr = arena_get2(ar_ptr->next ? ar_ptr : 0, bytes);
       (void)mutex_unlock(&main_arena.mutex);
