@@ -46,6 +46,18 @@
 
 #define top(ar_ptr) ((ar_ptr)->top)
 
+/* When using this "_my_" version of malloc, there will occur some errors 
+   because of memory we want to free may come from other version of malloc,
+   such as malloc in system's glibc.
+   So, in order to identify whether the memory is alloced by "_my_", we 
+   modify the heap_info' size entry. Since that, we can test the memory first 
+   when processing free function.  */
+
+#define heap_size2realsize(s) ((size_t)(s) & (~((size_t)0x1F << (64 - 5))))
+#define heap_realsize2size(s) ((size_t)(s) | ((size_t)0b10101 << (64 - 5)))
+#define is_myheap(h) (((h)->size) >> (64 - 5) == ((size_t)0b10101))
+#define is_heapsize_can_change(s) (!((size_t)(s) & ((size_t)0x1F << (64 - 5))))
+
 /* A heap is a single contiguous memory region holding (coalesceable)
    malloc_chunks.  It is allocated with mmap() and always starts at an
    address aligned to HEAP_MAX_SIZE.  Not used unless compiling with
@@ -93,7 +105,6 @@ int __malloc_initialized = -1;
   ptr = (mstate)tsd_getspecific(arena_key, vptr); \
   if(ptr && !mutex_trylock(&ptr->mutex)) { \
     if(ptr == &main_arena) {  \
-      write(2, "skip main arena\n", 17);  \
       ptr = arena_get2(ptr, (size)); \
     } else  \
       THREAD_STAT(++(ptr->stat_lock_direct)); \
@@ -497,7 +508,7 @@ dump_heap(heap) heap_info *heap;
   char *ptr;
   mchunkptr p;
 
-  fprintf(stderr, "Heap %p, size %10lx:\n", heap, (long)heap->size);
+  fprintf(stderr, "Heap %p, size %10lx:\n", heap, heap_size2realsize((long)heap->size));
   ptr = (heap->ar_ptr != (mstate)(heap+1)) ?
     (char*)(heap + 1) : (char*)(heap + 1) + sizeof(struct malloc_state);
   p = (mchunkptr)(((unsigned long)ptr + MALLOC_ALIGN_MASK) &
@@ -570,7 +581,13 @@ new_heap(size, top_pad) size_t size, top_pad;
     return 0;
   }
   h = (heap_info *)p2;
-  h->size = size;
+  /* when record the size information, make the top five bits as a key*/
+  if (is_heapsize_can_change(size)) {
+    h->size = heap_realsize2size(size);
+  } else {
+    write(2, "heapsize can't change\n", 23);
+    return 0;
+  }
   THREAD_STAT(stat_n_heaps++);
   return h;
 }
@@ -590,13 +607,13 @@ grow_heap(h, diff) heap_info *h; long diff;
 
   if(diff >= 0) {
     diff = (diff + page_mask) & ~page_mask;
-    new_size = (long)h->size + diff;
+    new_size = heap_size2realsize((long)h->size) + diff;
     if(new_size > HEAP_MAX_SIZE)
       return -1;
-    if(mprotect((char *)h + h->size, diff, PROT_READ|PROT_WRITE) != 0)
+    if(mprotect((char *)h + heap_size2realsize(h->size), diff, PROT_READ|PROT_WRITE) != 0)
       return -2;
   } else {
-    new_size = (long)h->size + diff;
+    new_size = heap_size2realsize((long)h->size) + diff;
     if(new_size < (long)sizeof(*h))
       return -1;
     /* Try to re-map the extra heap space freshly to save memory, and
@@ -606,7 +623,12 @@ grow_heap(h, diff) heap_info *h; long diff;
       return -2;
     /*fprintf(stderr, "shrink %p %08lx\n", h, new_size);*/
   }
-  h->size = new_size;
+  /* when record the size information, make the top five bits as a key*/
+  if (is_heapsize_can_change(new_size)) {
+    h->size = heap_realsize2size(new_size);
+  } else {
+    write(2, "heapsize can't change\n", 23);
+  }
   return 0;
 }
 
@@ -631,7 +653,7 @@ heap_trim(heap, pad) heap_info *heap; size_t pad;
   /* Can this heap go away completely? */
   while(top_chunk == chunk_at_offset(heap, sizeof(*heap))) {
     prev_heap = heap->prev;
-    p = chunk_at_offset(prev_heap, prev_heap->size - (MINSIZE-2*SIZE_SZ));
+    p = chunk_at_offset(prev_heap, heap_size2realsize(prev_heap->size) - (MINSIZE-2*SIZE_SZ));
     assert(p->size == (0|PREV_INUSE)); /* must be fencepost */
     p = prev_chunk(p);
     new_size = chunksize(p) + (MINSIZE-2*SIZE_SZ);
@@ -639,10 +661,10 @@ heap_trim(heap, pad) heap_info *heap; size_t pad;
     if(!prev_inuse(p))
       new_size += p->prev_size;
     assert(new_size>0 && new_size<HEAP_MAX_SIZE);
-    if(new_size + (HEAP_MAX_SIZE - prev_heap->size) < pad + MINSIZE + pagesz)
+    if(new_size + (HEAP_MAX_SIZE - heap_size2realsize(prev_heap->size)) < pad + MINSIZE + pagesz)
       break;
-    ar_ptr->system_mem -= heap->size;
-    arena_mem -= heap->size;
+    ar_ptr->system_mem -= heap_size2realsize(heap->size);
+    arena_mem -= heap_size2realsize(heap->size);
     delete_heap(heap);
     heap = prev_heap;
     if(!prev_inuse(p)) { /* consolidate backward */
@@ -650,7 +672,7 @@ heap_trim(heap, pad) heap_info *heap; size_t pad;
       unlink(p, bck, fwd);
     }
     assert(((unsigned long)((char*)p + new_size) & (pagesz-1)) == 0);
-    assert( ((char*)p + new_size) == ((char*)heap + heap->size) );
+    assert( ((char*)p + new_size) == ((char*)heap + heap_size2realsize(heap->size)) );
     top(ar_ptr) = top_chunk = p;
     set_head(top_chunk, new_size | PREV_INUSE);
     /*check_chunk(ar_ptr, top_chunk);*/
@@ -761,8 +783,8 @@ _int_new_arena(size_t size)
   a = h->ar_ptr = (mstate)(h+1);
   malloc_init_state(a);
   /*a->next = NULL;*/
-  a->system_mem = a->max_system_mem = h->size;
-  arena_mem += h->size;
+  a->system_mem = a->max_system_mem = heap_size2realsize(h->size);
+  arena_mem += heap_size2realsize(h->size);
 #ifdef NO_THREADS
   if((unsigned long)(mp_.mmapped_mem + arena_mem + main_arena.system_mem) >
      mp_.max_total_mem)
@@ -775,7 +797,7 @@ _int_new_arena(size_t size)
   if (misalign > 0)
     ptr += MALLOC_ALIGNMENT - misalign;
   top(a) = (mchunkptr)ptr;
-  set_head(top(a), (((char*)h + h->size) - ptr) | PREV_INUSE);
+  set_head(top(a), (((char*)h + heap_size2realsize(h->size)) - ptr) | PREV_INUSE);
 
   return a;
 }

@@ -534,50 +534,16 @@ Void_t *(*__morecore)(ptrdiff_t) = __default_morecore;
 /* define rename symbols from arena.c */
 # define _heap_info           _my__heap_info
 # define heap_info            _my_heap_info
-# define arena_key            _my_arena_key
-# define list_lock            _my_list_lock
-# define stat_n_heaps         _my_stat_n_heaps
-# define arena_mem            _my_arena_mem
 # define __malloc_initialized _my___malloc_initialized
-# define save_malloc_hook     _my_save_malloc_hook
-# define save_memalign_hook   _my_save_memalign_hook
-# define save_free_hook       _my_save_free_hook
-# define save_arena           _my_save_arena
-# define malloc_atfork        _my_malloc_atfork
-# define free_atfork          _my_free_atfork
-# define ptmalloc_lock_all    _my_ptmalloc_lock_all
-# define ptmalloc_unlock_all  _my_ptmalloc_unlock_all
-# define ptmalloc_unlock_all2 _my_ptmalloc_unlock_all2
 # define _environ             _my__environ
-# define next_env_entry       _my_next_env_entry
-# define ptmalloc_init_minimal _my_ptmalloc_init_minimal
 # define ptmalloc_init        _my_ptmalloc_init
 //# define thread_atfork_static _my_thread_atfork_static
-# define dump_heap            _my_dump_heap
-# define new_heap             _my_new_heap
-# define grow_heap            _my_grow_heap
-# define heap_trim            _my_heap_trim
-# define arena_get2           _my_arena_get2
 # define _int_new_arena       _my__int_new_arena
 # define _int_get_arena       _my__int_get_arena
 
 /* define rename symbols from hook.c */
-# define malloc_hook_ini        _my_malloc_hook_ini
-# define realloc_hook_ini       _my_realloc_hook_ini
-# define memalign_hook_ini      _my_memalign_hook_ini
-# define check_action           _my_check_action
-# define using_malloc_checking  _my_using_malloc_checking
-# define disallow_malloc_check  _my_disallow_malloc_check
-# define __malloc_check_init    _my___malloc_check_init
-# define mem2mem_check          _my_mem2mem_check
-# define mem2chunk_check        _my_mem2chunk_check
-# define top_check              _my_top_check
-# define malloc_check           _my_malloc_check
-# define free_check             _my_free_check
-# define realloc_check          _my_realloc_check
-# define memalign_check         _my_memalign_check
-# define malloc_starter         _my_malloc_starter
-# define malloc_save_state      _my_malloc_save_state
+# define __malloc_check_init  _my___malloc_check_init
+# define malloc_save_state    _my_malloc_save_state
 
 /* define rename symbols from malloc.c */
 # define malloc_chunk               _my_malloc_chunk
@@ -587,54 +553,20 @@ Void_t *(*__morecore)(ptrdiff_t) = __default_morecore;
 # define _int_realloc               _my__int_realloc
 # define _int_memalign              _my__int_memalign
 # define _int_valloc                _my__int_valloc
-# define _int_pvalloc               _my__int_pvalloc
-# define _int_icalloc               _my__int_icalloc
-# define _int_icomalloc             _my__int_icomalloc
-# define mTRIm                      _my_mTRIm
-# define mUSABLe                    _my_mUSABLe
-# define mALLOPt                    _my_mALLOPt
-# define mem2mem_check              _my_mem2mem_check
-# define top_check                  _my_top_check
-# define munmap_chunk               _my_munmap_chunk
-# define mremap_chunk               _my_mremap_chunk
-# define malloc_check               _my_malloc_check
-# define free_check                 _my_free_check
-# define realloc_check              _my_realloc_check
-# define memalign_check             _my_memalign_check
-# define malloc_starter             _my_malloc_starter
-# define memalign_starter           _my_memalign_starter
-# define free_starter               _my_free_starter
-# define malloc_atfork              _my_malloc_atfork
-# define free_atfork                _my_free_atfork
 # define mbinptr                    _my_mbinptr
 # define mfastbinptr                _my_mfastbinptr
 # define malloc_state               _my_malloc_state
 # define malloc_par                 _my_malloc_par
 # define main_arena                 _my_main_arena
 # define mp_                        _my_mp_
-# define malloc_init_state          _my_malloc_init_state
-# define sYSMALLOc                  _my_sYSMALLOc
-# define sYSTRIm                    _my_sYSTRIm
-# define malloc_consolidate         _my_malloc_consolidate
-# define iALLOc                     _my_iALLOc
-# define malloc_hook_ini            _my_malloc_hook_ini
-# define realloc_hook_ini           _my_realloc_hook_ini
-# define memalign_hook_ini          _my_memalign_hook_ini
 # define __malloc_initialize_hook   _my___malloc_initialize_hook
 # define __free_hook                _my___free_hook
 # define __malloc_hook              _my___malloc_hook
 # define __realloc_hook             _my___realloc_hook
 # define __memalign_hook            _my___memalign_hook
 # define __after_morecore_hook      _my___after_morecore_hook
-# define do_check_chunk             _my_do_check_chunk
-# define do_check_free_chunk        _my_do_check_free_chunk
-# define do_check_inuse_chunk       _my_do_check_inuse_chunk
-# define do_check_remalloced_chunk  _my_do_check_remalloced_chunk
-# define do_check_malloced_chunk    _my_do_check_malloced_chunk
-# define do_check_malloc_state      _my_do_check_malloc_state
-# define munmap_chunk               _my_munmap_chunk
-# define mremap_chunk               _my_mremap_chunk
-# define malloc_consolidate         _my_malloc_consolidate
+# define _int_icalloc               _my__int_icalloc
+# define _int_icomalloc             _my__int_icomalloc
 # define _int_get_arena_info        _my__int_get_arena_info
 # define _int_get_global_info       _my__int_get_global_info
 
@@ -1035,9 +967,9 @@ libc_hidden_proto (public_mALLOc)
   back unused memory to the system, thus reducing program footprint.
 */
 #if __STD_C
-void     public_fREe(Void_t*);
+void*    public_fREe(Void_t*);
 #else
-void     public_fREe();
+void*    public_fREe();
 #endif
 #ifdef libc_hidden_proto
 libc_hidden_proto (public_fREe)
@@ -1325,9 +1257,9 @@ Void_t*  public_pVALLOc();
   code in the first edition of K&R).
 */
 #if __STD_C
-void     public_cFREe(Void_t*);
+void*    public_cFREe(Void_t*);
 #else
-void     public_cFREe();
+void*    public_cFREe();
 #endif
 
 /*
@@ -3036,30 +2968,30 @@ static Void_t* sYSMALLOc(nb, av) INTERNAL_SIZE_T nb; mstate av;
 
     /* First try to extend the current heap. */
     old_heap = heap_for_ptr(old_top);
-    old_heap_size = old_heap->size;
+    old_heap_size = heap_size2realsize(old_heap->size);
     if (grow_heap(old_heap, MINSIZE + nb - old_size) == 0) {
-      av->system_mem += old_heap->size - old_heap_size;
-      arena_mem += old_heap->size - old_heap_size;
+      av->system_mem += heap_size2realsize(old_heap->size) - old_heap_size;
+      arena_mem += heap_size2realsize(old_heap->size) - old_heap_size;
 #if 0
       if(mmapped_mem + arena_mem + sbrked_mem > max_total_mem)
         max_total_mem = mmapped_mem + arena_mem + sbrked_mem;
 #endif
-      set_head(old_top, (((char *)old_heap + old_heap->size) - (char *)old_top)
+      set_head(old_top, (((char *)old_heap + heap_size2realsize(old_heap->size)) - (char *)old_top)
 	       | PREV_INUSE);
     }
     else if ((heap = new_heap(nb + (MINSIZE + sizeof(*heap)), mp_.top_pad))) {
       /* Use a newly allocated heap.  */
       heap->ar_ptr = av;
       heap->prev = old_heap;
-      av->system_mem += heap->size;
-      arena_mem += heap->size;
+      av->system_mem += heap_size2realsize(heap->size);
+      arena_mem += heap_size2realsize(heap->size);
 #if 0
       if((unsigned long)(mmapped_mem + arena_mem + sbrked_mem) > max_total_mem)
 	max_total_mem = mmapped_mem + arena_mem + sbrked_mem;
 #endif
       /* Set up the new top.  */
       top(av) = chunk_at_offset(heap, sizeof(*heap));
-      set_head(top(av), (heap->size - sizeof(*heap)) | PREV_INUSE);
+      set_head(top(av), (heap_size2realsize(heap->size) - sizeof(*heap)) | PREV_INUSE);
 
       /* Setup fencepost and free the old top chunk. */
       /* The fencepost takes at least MINSIZE bytes, because it might
@@ -3550,7 +3482,7 @@ public_mALLOc(size_t bytes)
 libc_hidden_def(public_mALLOc)
 #endif
 
-void
+void*
 public_fREe(Void_t* mem)
 {
   mstate ar_ptr;
@@ -3560,11 +3492,11 @@ public_fREe(Void_t* mem)
     __free_hook;
   if (hook != NULL) {
     (*hook)(mem, RETURN_ADDRESS (0));
-    return;
+    return 0;
   }
 
   if (mem == 0)                              /* free(0) has no effect */
-    return;
+    return 0;
 
   p = mem2chunk(mem);
 
@@ -3572,11 +3504,32 @@ public_fREe(Void_t* mem)
   if (chunk_is_mmapped(p))                       /* release mmapped memory. */
   {
     munmap_chunk(p);
-    return;
+    return 0;
   }
 #endif
 
   ar_ptr = arena_for_chunk(p);
+  
+  /* test if the arena pointer is defined by "_my_" version of malloc*/
+  if ((ar_ptr == &main_arena) || (!is_myheap(heap_for_ptr(p)))) {
+    return (void*)1;
+  }
+  /* this testing way will cause some error with dead lock
+  int is_myarena = 1;
+  for (struct malloc_state *it = &main_arena; it != NULL; it = it->next){
+    if (ar_ptr == it){
+      is_myarena = 1;
+      break;
+    } else {
+      is_myarena = 0;
+    }
+  }
+  if (!is_myarena) {
+    write(2, "not my\n", 8);
+    return;
+  }
+  */
+
 #if THREAD_STATS
   if(!mutex_trylock(&ar_ptr->mutex))
     ++(ar_ptr->stat_lock_direct);
@@ -3589,6 +3542,8 @@ public_fREe(Void_t* mem)
 #endif
   _int_free(ar_ptr, mem);
   (void)mutex_unlock(&ar_ptr->mutex);
+
+  return 0;
 }
 #ifdef libc_hidden_def
 libc_hidden_def (public_fREe)
@@ -3913,10 +3868,10 @@ public_iCOMALLOc(size_t n, size_t sizes[], Void_t** chunks)
 
 #ifndef _LIBC
 
-void
+void*
 public_cFREe(Void_t* m)
 {
-  public_fREe(m);
+  return public_fREe(m);
 }
 
 #endif /* _LIBC */
@@ -5209,7 +5164,7 @@ _int_valloc(av, bytes) mstate av; size_t bytes;
 */
 
 
-Void_t*
+static Void_t*
 #if __STD_C
 _int_pvalloc(mstate av, size_t bytes)
 #else
@@ -5230,9 +5185,9 @@ _int_pvalloc(av, bytes) mstate av, size_t bytes;
 */
 
 #if __STD_C
-int mTRIm(size_t pad)
+static int mTRIm(size_t pad)
 #else
-int mTRIm(pad) size_t pad;
+static int mTRIm(pad) size_t pad;
 #endif
 {
   mstate av = &main_arena; /* already locked */
@@ -5253,9 +5208,9 @@ int mTRIm(pad) size_t pad;
 */
 
 #if __STD_C
-size_t mUSABLe(Void_t* mem)
+static size_t mUSABLe(Void_t* mem)
 #else
-size_t mUSABLe(mem) Void_t* mem;
+static size_t mUSABLe(mem) Void_t* mem;
 #endif
 {
   mchunkptr p;
@@ -5347,9 +5302,9 @@ _int_get_global_info (struct malloc_global_info *mgi)
 */
 
 #if __STD_C
-int mALLOPt(int param_number, int value)
+static int mALLOPt(int param_number, int value)
 #else
-int mALLOPt(param_number, value) int param_number; int value;
+static int mALLOPt(param_number, value) int param_number; int value;
 #endif
 {
   mstate av = &main_arena;

@@ -68,7 +68,7 @@ libmalloc.a: $(MALLOC_OBJ)
 
 shared: libptmalloc2_with_cold.so
 
-libptmalloc2_with_cold.so: _my_malloc.c _my_malloc-stats.c _my_malloc.h
+libptmalloc2_with_cold.so: _my_malloc.c _my_malloc-stats.c _my_malloc.h _my_arena.c _my_hooks.c
 	$(CC) $(SH_FLAGS) $(CFLAGS) $(M_FLAGS) _my_malloc.c _my_malloc-stats.c -o $@
 
 again:

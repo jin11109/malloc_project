@@ -120,7 +120,7 @@ extern "C" {
    `__malloc_initialized' to `__libc_malloc_initialized'.  */
 # define __malloc_initialized __libc_malloc_initialized
 #endif
-extern int __malloc_initialized;
+extern int _my___malloc_initialized;
 
 /* Allocate SIZE bytes of memory.  */
 extern __malloc_ptr_t _my_malloc __MALLOC_P ((size_t __size)) __attribute_malloc__;
@@ -136,10 +136,10 @@ extern __malloc_ptr_t _my_realloc __MALLOC_P ((__malloc_ptr_t __ptr,
        __attribute_malloc__;
 
 /* Free a block allocated by `malloc', `realloc' or `calloc'.  */
-extern void _my_free __MALLOC_P ((__malloc_ptr_t __ptr));
+extern void* _my_free __MALLOC_P ((__malloc_ptr_t __ptr));
 
 /* Free a block allocated by `calloc'. */
-extern void _my_cfree __MALLOC_P ((__malloc_ptr_t __ptr));
+extern void* _my_cfree __MALLOC_P ((__malloc_ptr_t __ptr));
 
 /* Allocate SIZE bytes allocated to ALIGNMENT bytes.  */
 extern __malloc_ptr_t _my_memalign __MALLOC_P ((size_t __alignment, size_t __size));
