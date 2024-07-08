@@ -3451,10 +3451,17 @@ public_mALLOc(size_t bytes)
   arena_get(ar_ptr, bytes);
   if(!ar_ptr)
     return 0;
+  /* tset if using main arena */
+  if(ar_ptr == &main_arena){
+    write(2, "main\n\n\n", 9);
+    return 0;
+  }
   victim = _int_malloc(ar_ptr, bytes);
   if(!victim) {
     /* Maybe the failure is due to running out of mmapped areas. */
     if(ar_ptr != &main_arena) {
+      write(2, "using main arena\n", 18);
+      return 0;
       /*
       (void)mutex_unlock(&ar_ptr->mutex);
       (void)mutex_lock(&main_arena.mutex);
@@ -3649,12 +3656,21 @@ public_mEMALIGn(size_t alignment, size_t bytes)
     return 0;
   p = _int_memalign(ar_ptr, alignment, bytes);
   (void)mutex_unlock(&ar_ptr->mutex);
+  /* tset if using main arena */
+  if(ar_ptr == &main_arena){
+    write(2, "main\n\n\n", 9);
+    return 0;
+  }
   if(!p) {
     /* Maybe the failure is due to running out of mmapped areas. */
     if(ar_ptr != &main_arena) {
+      write(2, "using main arena\n", 18);
+      return 0;
+      /*
       (void)mutex_lock(&main_arena.mutex);
       p = _int_memalign(&main_arena, alignment, bytes);
       (void)mutex_unlock(&main_arena.mutex);
+      */
     } else {
 #if USE_ARENAS
       /* ... or sbrk() has failed and there is still a chance to mmap() */
@@ -3767,12 +3783,21 @@ public_cALLOc(size_t n, size_t elem_size)
   assert(!mem || chunk_is_mmapped(mem2chunk(mem)) ||
 	 av == arena_for_chunk(mem2chunk(mem)));
 
+  /* tset if using main arena */
+  if(av == &main_arena){
+    write(2, "main\n\n\n", 9);
+    return 0;
+  }
   if (mem == 0) {
     /* Maybe the failure is due to running out of mmapped areas. */
     if(av != &main_arena) {
+      write(2, "using main arena\n", 18);
+      return 0;
+      /*
       (void)mutex_lock(&main_arena.mutex);
       mem = _int_malloc(&main_arena, sz);
       (void)mutex_unlock(&main_arena.mutex);
+      */
     } else {
 #if USE_ARENAS
       /* ... or sbrk() has failed and there is still a chance to mmap() */
