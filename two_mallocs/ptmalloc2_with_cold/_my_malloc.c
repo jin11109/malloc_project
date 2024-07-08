@@ -1759,10 +1759,15 @@ static int dev_zero_fd = -1; /* Cached file descriptor for /dev/zero. */
   mmap((addr), (size), (prot), (flags), dev_zero_fd, 0)) : \
    mmap((addr), (size), (prot), (flags), dev_zero_fd, 0))
 
+#define write_mmap(addr, size) ((void)0)
+
 #else
 
 #define MMAP(addr, size, prot, flags) \
  (mmap((addr), (size), (prot), (flags)|MAP_ANONYMOUS, -1, 0))
+
+void write_mmap(addr, size) {
+}
 
 #endif
 
