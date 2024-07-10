@@ -110,6 +110,9 @@ int __malloc_initialized = -1;
       THREAD_STAT(++(ptr->stat_lock_direct)); \
   } else \
     ptr = arena_get2(ptr, (size)); \
+  if (ptr == &main_arena) {  \
+    write(2, "run to main arena\n", 19);  \
+  } \
 } while(0)
 
 /* find the heap and corresponding arena for a given ptr */
@@ -239,7 +242,8 @@ ptmalloc_lock_all __MALLOC_P((void))
     return;
   (void)mutex_lock(&list_lock);
   for(ar_ptr = &main_arena;;) {
-    (void)mutex_lock(&ar_ptr->mutex);
+    if (ar_ptr != &main_arena)
+      (void)mutex_lock(&ar_ptr->mutex);
     ar_ptr = ar_ptr->next;
     if(ar_ptr == &main_arena) break;
   }
@@ -263,7 +267,8 @@ ptmalloc_unlock_all __MALLOC_P((void))
   __malloc_hook = save_malloc_hook;
   __free_hook = save_free_hook;
   for(ar_ptr = &main_arena;;) {
-    (void)mutex_unlock(&ar_ptr->mutex);
+    if (ar_ptr != &main_arena)
+      (void)mutex_unlock(&ar_ptr->mutex);
     ar_ptr = ar_ptr->next;
     if(ar_ptr == &main_arena) break;
   }

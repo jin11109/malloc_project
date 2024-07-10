@@ -51,6 +51,9 @@ gcc -fPIC -g -c mymalloc_with_cold.c -I./ptmalloc2_with_cold/
 gcc -shared ./mymalloc_with_cold.o -L./ptmalloc2_with_cold/ -lptmalloc2_with_cold -o ./mymalloc_with_cold.so
 sudo cp ./mymalloc_with_cold.so /lib/
 
+# also copy ptmalloc2 library to /lib/
+sudo cp ./ptmalloc2_with_cold/libptmalloc2_with_cold.so /lib/
+
 # compile c to execute target program
 gcc -O3 ./program.c -o ./program || { 
     echo "ERROR : compile program.c fail";
@@ -69,15 +72,13 @@ python3 ./data_record.py &
 # wait for ./data_record.py
 wait
 
-gzip -d ./data/cachemisses.csv.gz 
-
 # # merge the data from drcachesim and LD_PRELOAD function
 # python3 ./data_merge.py
 # cp ./data/myaf* ./result/
 # cp ./data/endtime ./result/
 # cp ./data/adjustment_time ./result/
 
-# # show the result
+# # # show the result
 # python3 ./data_show.py
 
 rm ./fifo_preload

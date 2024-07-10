@@ -24,7 +24,7 @@ int main(int argc, char *argv[]) {
         }
         
         setenv("LD_PRELOAD", "/lib/mymalloc_with_cold.so", 1);
-        setenv("LD_LIBRARY_PATH", "./ptmalloc2_with_cold/:$LD_LIBRARY_PATH", 1);     
+        //setenv("LD_LIBRARY_PATH", "/lib/ptmalloc2_with_cold/:$LD_LIBRARY_PATH", 1);     
         execvp(argv[1], &argv[1]);
 
     }
