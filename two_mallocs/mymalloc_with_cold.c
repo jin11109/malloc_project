@@ -29,8 +29,11 @@ void* malloc(size_t bytes) {
     void* ptr = _my_malloc(bytes);
     void* return_addr = __builtin_extract_return_addr(__builtin_return_address(
         0)); // value of 0 yields return address of the current function
-    if (bytes != 0)
-        fprintf(stderr, "mya %d %ld %p %p %c\n", getpid(), bytes, ptr, return_addr, 'm');
+    if (bytes == 0 || is_flag_mmaped(ptr)) {
+        return unable_flag(ptr);
+    }
+
+    fprintf(stderr, "mya %d %ld %p %p %c\n", getpid(), bytes, ptr, return_addr, 'm');
 
     return ptr;
 }
@@ -39,8 +42,15 @@ void* realloc(void* addr, size_t size) {
     void* ptr = _my_realloc(addr, size);
     void* return_addr = __builtin_extract_return_addr(__builtin_return_address(
         0)); // value of 0 yields return address of the current function
-    if (size != 0)
-        fprintf(stderr, "mya %d %ld %p %p %c\n", getpid(), size, ptr, return_addr, 'r');
+    if (is_flag_notmy(ptr)) {
+        void* orig_free = dlsym(RTLD_NEXT, "realloc");
+        return ((void* (*)(void*, size_t))orig_free)(addr, size);
+    }
+    if (is_flag_mmaped(ptr)) {
+        return unable_flag(ptr);
+    }
+
+    fprintf(stderr, "mya %d %ld %p %p %c\n", getpid(), size, ptr, return_addr, 'r');
     
     return ptr;
 }
@@ -49,21 +59,23 @@ void* calloc(size_t nmemb, size_t size) {
     void* ptr = _my_calloc(nmemb, size);
     void* return_addr = __builtin_extract_return_addr(__builtin_return_address(
         0)); // value of 0 yields return address of the current function
-    if (nmemb * size != 0)
-        fprintf(stderr, "mya %d %ld %p %p %c\n", getpid(), size, ptr, return_addr, 'c');
+    if (size * nmemb == 0 | is_flag_mmaped(ptr)) {
+        return unable_flag(ptr);
+    }
+
+    fprintf(stderr, "mya %d %ld %p %p %c\n", getpid(), size, ptr, return_addr, 'c');
+    
     return ptr;
 }
 
 void free(void* addr) {
     void* ptr = _my_free(addr);
-    if (!ptr) { // this represent to successfully free the memory by _my_free
+    if (!is_flag_notmy(ptr)) { // this represent to successfully free the memory by _my_free
         return ;
     } else { // call original free to process this memory
         void* orig_free = dlsym(RTLD_NEXT, "free");
         ((void (*)(void*))orig_free)(addr);
     }
-
-    //if (addr != 0) print_info_free(getpid(), addr);
     
 }
 

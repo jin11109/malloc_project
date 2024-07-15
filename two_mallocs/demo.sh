@@ -72,14 +72,8 @@ python3 ./data_record.py &
 # wait for ./data_record.py
 wait
 
-# # merge the data from drcachesim and LD_PRELOAD function
-# python3 ./data_merge.py
-# cp ./data/myaf* ./result/
-# cp ./data/endtime ./result/
-# cp ./data/adjustment_time ./result/
-
-# # # show the result
-# python3 ./data_show.py
+gzip -d ./data/cachemisses.csv.gz 
+sed -i '1i addr,pid' ./data/cachemisses.csv
 
 rm ./fifo_preload
 echo 1 | sudo tee /proc/sys/kernel/randomize_va_space > /dev/null

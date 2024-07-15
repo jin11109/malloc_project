@@ -120,6 +120,15 @@ extern "C" {
    `__malloc_initialized' to `__libc_malloc_initialized'.  */
 # define __malloc_initialized __libc_malloc_initialized
 #endif
+
+#define FLAG_MMAPPED 0b10
+#define FLAG_NOTMY 0b01
+#define set_mmaped_flag(flag) (void*)((size_t)(flag) | ((size_t)FLAG_MMAPPED << (64 - 2)))
+#define set_notmy_flag(flag) (void*)((size_t)(flag) | ((size_t)FLAG_NOTMY << (64 - 2)))
+#define unable_flag(flag) (void*)((size_t)(flag) & (~((size_t)0b11 << (64 - 2))))
+#define is_flag_notmy(flag) ((size_t)flag >> (64 - 2) & ((size_t)FLAG_NOTMY))
+#define is_flag_mmaped(flag) ((size_t)flag >> (64 - 2) & ((size_t)FLAG_MMAPPED))
+
 extern int _my___malloc_initialized;
 
 /* Allocate SIZE bytes of memory.  */

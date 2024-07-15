@@ -1759,15 +1759,10 @@ static int dev_zero_fd = -1; /* Cached file descriptor for /dev/zero. */
   mmap((addr), (size), (prot), (flags), dev_zero_fd, 0)) : \
    mmap((addr), (size), (prot), (flags), dev_zero_fd, 0))
 
-#define write_mmap(addr, size) ((void)0)
-
 #else
 
 #define MMAP(addr, size, prot, flags) \
  (mmap((addr), (size), (prot), (flags)|MAP_ANONYMOUS, -1, 0))
-
-void write_mmap(addr, size) {
-}
 
 #endif
 
@@ -3488,6 +3483,9 @@ public_mALLOc(size_t bytes)
     (void)mutex_unlock(&ar_ptr->mutex);
   assert(!victim || chunk_is_mmapped(mem2chunk(victim)) ||
 	 ar_ptr == arena_for_chunk(mem2chunk(victim)));
+  
+  if (chunk_is_mmapped(mem2chunk(victim)))
+    return set_mmaped_flag(victim);
   return victim;
 }
 #ifdef libc_hidden_def
@@ -3524,7 +3522,7 @@ public_fREe(Void_t* mem)
   
   /* test if the arena pointer is defined by "_my_" version of malloc*/
   if ((ar_ptr == &main_arena) || (!is_myheap(heap_for_ptr(p)))) {
-    return (void*)1;
+    return set_notmy_flag(0);
   }
   /* this testing way will cause some error with dead lock
   int is_myarena = 1;
@@ -3579,7 +3577,7 @@ public_rEALLOc(Void_t* oldmem, size_t bytes)
     return (*hook)(oldmem, bytes, RETURN_ADDRESS (0));
 
 #if REALLOC_ZERO_BYTES_FREES
-  if (bytes == 0 && oldmem != NULL) { public_fREe(oldmem); return 0; }
+  if (bytes == 0 && oldmem != NULL) { return public_fREe(oldmem); }
 #endif
 
   /* realloc of null is supposed to be same as malloc */
@@ -3597,16 +3595,16 @@ public_rEALLOc(Void_t* oldmem, size_t bytes)
 
 #if HAVE_MREMAP
     newp = mremap_chunk(oldp, nb);
-    if(newp) return chunk2mem(newp);
+    if(newp) return set_mmaped_flag(chunk2mem(newp));
 #endif
     /* Note the extra SIZE_SZ overhead. */
     if(oldsize - SIZE_SZ >= nb) return oldmem; /* do nothing */
     /* Must alloc, copy, free. */
-    newmem = public_mALLOc(bytes);
+    newmem = unable_flag(public_mALLOc(bytes));
     if (newmem == 0) return 0; /* propagate failure */
     MALLOC_COPY(newmem, oldmem, oldsize - 2*SIZE_SZ);
     munmap_chunk(oldp);
-    return newmem;
+    return set_mmaped_flag(newmem);
   }
 #endif
 
@@ -3632,6 +3630,13 @@ public_rEALLOc(Void_t* oldmem, size_t bytes)
   (void)mutex_unlock(&ar_ptr->mutex);
   assert(!newp || chunk_is_mmapped(mem2chunk(newp)) ||
 	 ar_ptr == arena_for_chunk(mem2chunk(newp)));
+  
+  if (chunk_is_mmapped(mem2chunk(newp)))
+    newp = set_mmaped_flag(newp);
+  /* test if the arena pointer is defined by "_my_" version of malloc*/
+  if ((ar_ptr == &main_arena) || (!is_myheap(heap_for_ptr(oldp)))) {
+    return set_notmy_flag(newp);
+  }
   return newp;
 }
 #ifdef libc_hidden_def
@@ -3822,7 +3827,7 @@ public_cALLOc(size_t n, size_t elem_size)
   /* Two optional cases in which clearing not necessary */
 #if HAVE_MMAP
   if (chunk_is_mmapped(p))
-    return mem;
+    return set_mmaped_flag(mem);
 #endif
 
   csz = chunksize(p);
