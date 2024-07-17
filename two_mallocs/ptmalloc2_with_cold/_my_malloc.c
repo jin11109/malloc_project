@@ -3609,6 +3609,11 @@ public_rEALLOc(Void_t* oldmem, size_t bytes)
 #endif
 
   ar_ptr = arena_for_chunk(oldp);
+  /* test if the arena pointer is defined by "_my_" version of malloc*/
+  if ((ar_ptr == &main_arena) || (!is_myheap(heap_for_ptr(oldp)))) {
+    return set_notmy_flag(0);
+  }
+
 #if THREAD_STATS
   if(!mutex_trylock(&ar_ptr->mutex))
     ++(ar_ptr->stat_lock_direct);
@@ -3633,10 +3638,7 @@ public_rEALLOc(Void_t* oldmem, size_t bytes)
   
   if (chunk_is_mmapped(mem2chunk(newp)))
     newp = set_mmaped_flag(newp);
-  /* test if the arena pointer is defined by "_my_" version of malloc*/
-  if ((ar_ptr == &main_arena) || (!is_myheap(heap_for_ptr(oldp)))) {
-    return set_notmy_flag(newp);
-  }
+
   return newp;
 }
 #ifdef libc_hidden_def
