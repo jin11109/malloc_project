@@ -5,7 +5,7 @@ PAGE_SIZE = 4096
 def main():
     path = input("input cold mallocs table (should be total path) or 'enter' to accept all\n")
     if len(path) == 0:
-        cold_addrs_flag = [1] * PAGE_SIZE
+        cold_addrs_flag = [0] * PAGE_SIZE
         with open("cold_addrs.h", 'w') as f:
             f.write(
                 "#include<stdbool.h>\n" + \

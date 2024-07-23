@@ -136,7 +136,7 @@ linux-pthread:
 
 linux-malloc.so:
 	$(MAKE) SYS_FLAGS='-D_GNU_SOURCE=1' \
- WARN_FLAGS='-Wall -Wstrict-prototypes' \
+ WARN_FLAGS='-Wall -Wstrict-prototypes -Wno-unused-result -Wno-unused-but-set-variable ' \
  OPT_FLAGS='$(OPT_FLAGS)' THR_FLAGS='-DUSE_TSD_DATA_HACK' \
  INC_FLAGS='-Isysdeps/pthread -Isysdeps/generic -I.' M_FLAGS='$(M_FLAGS)' \
  libptmalloc2_with_cold.so

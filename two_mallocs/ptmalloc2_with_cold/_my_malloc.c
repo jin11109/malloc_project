@@ -3485,7 +3485,7 @@ public_mALLOc(size_t bytes)
 	 ar_ptr == arena_for_chunk(mem2chunk(victim)));
   
   if (chunk_is_mmapped(mem2chunk(victim)))
-    return set_mmaped_flag(victim);
+    return set_mmapped_flag(victim);
   return victim;
 }
 #ifdef libc_hidden_def
@@ -3595,7 +3595,7 @@ public_rEALLOc(Void_t* oldmem, size_t bytes)
 
 #if HAVE_MREMAP
     newp = mremap_chunk(oldp, nb);
-    if(newp) return set_mmaped_flag(chunk2mem(newp));
+    if(newp) return set_mmapped_flag(chunk2mem(newp));
 #endif
     /* Note the extra SIZE_SZ overhead. */
     if(oldsize - SIZE_SZ >= nb) return oldmem; /* do nothing */
@@ -3604,7 +3604,7 @@ public_rEALLOc(Void_t* oldmem, size_t bytes)
     if (newmem == 0) return 0; /* propagate failure */
     MALLOC_COPY(newmem, oldmem, oldsize - 2*SIZE_SZ);
     munmap_chunk(oldp);
-    return set_mmaped_flag(newmem);
+    return set_mmapped_flag(newmem);
   }
 #endif
 
@@ -3637,7 +3637,7 @@ public_rEALLOc(Void_t* oldmem, size_t bytes)
 	 ar_ptr == arena_for_chunk(mem2chunk(newp)));
   
   if (chunk_is_mmapped(mem2chunk(newp)))
-    newp = set_mmaped_flag(newp);
+    newp = set_mmapped_flag(newp);
 
   return newp;
 }
@@ -3829,7 +3829,7 @@ public_cALLOc(size_t n, size_t elem_size)
   /* Two optional cases in which clearing not necessary */
 #if HAVE_MMAP
   if (chunk_is_mmapped(p))
-    return set_mmaped_flag(mem);
+    return set_mmapped_flag(mem);
 #endif
 
   csz = chunksize(p);

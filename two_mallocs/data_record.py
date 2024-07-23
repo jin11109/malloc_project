@@ -33,12 +33,12 @@ def write_data(data, filename):
 def capture_data():
     global file_names, end_time, files_to_close
 
-    flag = {}
+    flag = False
 
     print("data_record.py : read fifo for the mymalloc.so output : ./fifo open")
     with open("./fifo_preload", "r") as fifo:
         record_start_time = time.monotonic()
-        
+        filename = "./data/mynewheap.csv"
         while True:
             data = fifo.readline()
     
@@ -56,33 +56,17 @@ def capture_data():
                 break
 
             data = data.strip()
-            if data[0: 2] != "my":
+            if data[0: 9] != "mynewheap":
                 print(data)
                 continue
             
             info = data.split(" ")
-            filename = "./data/" + info[0] + "_" + info[1] + ".csv"
-            pid = int(info[1], 10)
-
-            if flag.get(info[0] + info[1]) is None:
-                flag[info[0] + info[1]] = True
-                if info[0] == "mya":
-                    write_data(["size", "data_addr", "caller_addr", "alloc_type"], filename)
-                elif info[0] == "myf":
-                    write_data(["data_add"], filename)
-                elif info[0] == "myi":
-                    write_data(["begin", "end", "caller_addr"], filename)
-
-            if info[0] == "mya":
-                write_data([int(info[2], 10), int(info[3], 16), int(info[4], 16), info[5]], filename)
-            elif info[0] == "myf":
-                write_data([int(info[2], 16)], filename)
-            elif info[0] == "myi":
-                write_data([int(info[2], 16), int(info[3], 16), int(info[4], 16)], filename)
-
-            if file_names.get(pid) is None:
-                file_names[pid] = {}
-            file_names[pid][info[0]] = filename
+            
+            if flag == False:
+                flag = True    
+                write_data(["pid", "tid", "mmapped_addr", "size", "version_key"], filename)
+    
+            write_data([int(info[1], 10), int(info[2], 10), int(info[3], 16), int(info[4], 10), int(info[5], 10)], filename)
 
 if __name__ == "__main__":
     capture_data()

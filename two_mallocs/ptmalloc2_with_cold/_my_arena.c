@@ -21,11 +21,15 @@
 /* $Id: arena.c,v 1.9 2004/11/05 14:42:23 wg Exp $ */
 
 /* Compile-time constants.  */
-
-#define HEAP_MIN_SIZE (32*1024)
-#ifndef HEAP_MAX_SIZE
-#define HEAP_MAX_SIZE (1024*1024) /* must be a power of two */
-#endif
+#ifdef USE_MY_PREFIX
+# define HEAP_MIN_SIZE (32*1024)
+# define HEAP_MAX_SIZE (32*1024*1024)
+#else
+# define HEAP_MIN_SIZE (32*1024)
+# ifndef HEAP_MAX_SIZE
+# define HEAP_MAX_SIZE (1024*1024) /* must be a power of two */
+# endif
+#endif /* USE_MY_PREFIX */
 
 /* HEAP_MIN_SIZE and HEAP_MAX_SIZE limit the size of mmap()ed heaps
    that are dynamically created for multi-threaded programs.  The
@@ -34,6 +38,9 @@
    mmap threshold, so that requests with a size just below that
    threshold can be fulfilled without creating too many heaps.  */
 
+#ifdef USE_MY_PREFIX
+#include <unistd.h> /* Used for get heap info */
+#endif
 
 #ifndef THREAD_STATS
 #define THREAD_STATS 0
@@ -53,9 +60,10 @@
    modify the heap_info' size entry. Since that, we can test the memory first 
    when processing free function.  */
 
+#define _MY_VERSION_KEY 0b10101
 #define heap_size2realsize(s) ((size_t)(s) & (~((size_t)0x1F << (64 - 5))))
-#define heap_realsize2size(s) ((size_t)(s) | ((size_t)0b10101 << (64 - 5)))
-#define is_myheap(h) (((h)->size) >> (64 - 5) == ((size_t)0b10101))
+#define heap_realsize2size(s) ((size_t)(s) | ((size_t)_MY_VERSION_KEY << (64 - 5)))
+#define is_myheap(h) (((h)->size) >> (64 - 5) == ((size_t)_MY_VERSION_KEY))
 #define is_heapsize_can_change(s) (!((size_t)(s) & ((size_t)0x1F << (64 - 5))))
 
 /* A heap is a single contiguous memory region holding (coalesceable)
@@ -586,6 +594,8 @@ new_heap(size, top_pad) size_t size, top_pad;
     return 0;
   }
   h = (heap_info *)p2;
+  fprintf(stderr, "mynewheap %d %d %p %lu %u\n", getpid(), gettid(), p2, 
+          (unsigned long)HEAP_MAX_SIZE, _MY_VERSION_KEY);
   /* when record the size information, make the top five bits as a key*/
   if (is_heapsize_can_change(size)) {
     h->size = heap_realsize2size(size);
@@ -658,7 +668,8 @@ heap_trim(heap, pad) heap_info *heap; size_t pad;
   /* Can this heap go away completely? */
   while(top_chunk == chunk_at_offset(heap, sizeof(*heap))) {
     prev_heap = heap->prev;
-    p = chunk_at_offset(prev_heap, heap_size2realsize(prev_heap->size) - (MINSIZE-2*SIZE_SZ));
+    p = chunk_at_offset(prev_heap, heap_size2realsize(prev_heap->size) 
+                        - (MINSIZE-2*SIZE_SZ));
     assert(p->size == (0|PREV_INUSE)); /* must be fencepost */
     p = prev_chunk(p);
     new_size = chunksize(p) + (MINSIZE-2*SIZE_SZ);
@@ -666,11 +677,14 @@ heap_trim(heap, pad) heap_info *heap; size_t pad;
     if(!prev_inuse(p))
       new_size += p->prev_size;
     assert(new_size>0 && new_size<HEAP_MAX_SIZE);
-    if(new_size + (HEAP_MAX_SIZE - heap_size2realsize(prev_heap->size)) < pad + MINSIZE + pagesz)
+    if(new_size + (HEAP_MAX_SIZE - heap_size2realsize(prev_heap->size)) 
+      < pad + MINSIZE + pagesz)
       break;
     ar_ptr->system_mem -= heap_size2realsize(heap->size);
     arena_mem -= heap_size2realsize(heap->size);
-    delete_heap(heap);
+    /* we command this in order to prevent when use new heap in furture
+     , system will not reuse this space */
+    // delete_heap(heap);
     heap = prev_heap;
     if(!prev_inuse(p)) { /* consolidate backward */
       p = prev_chunk(p);
