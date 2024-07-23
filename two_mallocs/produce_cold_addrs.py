@@ -3,7 +3,7 @@ import pandas as pd
 PAGE_SIZE = 4096
 
 def main():
-    path = input("input cold mallocs table (should be total path) or 'enter' to accept all\n")
+    path = input("input cold mallocs table (should be total path) or 'enter' to skip\n")
     if len(path) == 0:
         cold_addrs_flag = [0] * PAGE_SIZE
         with open("cold_addrs.h", 'w') as f:

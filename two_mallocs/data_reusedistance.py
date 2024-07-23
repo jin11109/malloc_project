@@ -10,6 +10,7 @@ import re
 import json
 import gc
 import shutil
+from progressbar import*
 
 PAGE_SIZE = 4096
 COLD = 0
@@ -41,6 +42,7 @@ def add_temperature_col(df_cold, df_other, input_path, output_path):
     first_chunk = True
 
     chunk_index = 0
+    print("chunk already done: ", end='', flush=True)
     for df_chunk in reader:
         df_chunk["addr"] = df_chunk["addr"].apply(lambda x: int(x, 16))
         df_chunk['temperature'] = NOT_CONSIDER
@@ -62,20 +64,20 @@ def add_temperature_col(df_cold, df_other, input_path, output_path):
         else:
             df_chunk.to_csv(output_path, mode='a', index=False, header=False)
         
-        print(f"chunk {chunk_index} ok")
+        print(f"{chunk_index} ", end='', flush=True)
         chunk_index += 1
-    
+    print()
     del reader
     gc.collect()
 
 def add_index_col(input_path, output_path):
     df = pd.read_csv(input_path, dtype=dtype)
     df["global_index"] = df.index
-    print("add index")
+    print("add index", end='', flush=True)
     df.to_csv(output_path, index=False)
     del df
     gc.collect()
-    print("add index done")
+    print(" done")
 
 def build_key_groups(key_dir, input_path):
     try:
@@ -91,37 +93,45 @@ def build_key_groups(key_dir, input_path):
     chunk_index = 0
     keys = {}
     for df_chunk in reader:
-        #df_chunk["page"] = df_chunk["addr"].apply(lambda x: int(x, 16) // PAGE_SIZE)
         groups = df_chunk.groupby('pid_page')
-        print("\n    len", len(groups))
-        index = 0
+        # initialize progress bar
+        maxval = len(groups)
+        count = 0
+        widgets = [f'build_key_groups chunk:{chunk_index} ', Percentage(), '', Bar('#'), '', '', '', '', '', FileTransferSpeed()]
+        pbar = ProgressBar(widgets=widgets, maxval=maxval).start()
+
         for (key, group) in groups:
-            print(f"    {index} key", key)
             filename = f"{key}.csv"
-            index += 1
             if keys.get(filename) is not None:
                 group[["temperature", "global_index"]].to_csv(f"{key_dir}{filename}", mode='a', index=False, header=False)
             else:
                 keys[filename] = True
                 group[["temperature", "global_index"]].to_csv(f"{key_dir}{filename}", index=False)
-        print("\n")
-        
-        print(f"chunk {chunk_index} ok\n\n\n")
+            pbar.update(count)
+            count += 1
+
         chunk_index += 1
     
+    pbar.finish()
     del reader
     gc.collect()
 
-def calculate_reuse_distances(key_dor):
+def calculate_reuse_distances(key_dir):
     reuse_distance = {
         COLD : [],
         OTHER : [],
         NOT_CONSIDER : []
     }
-    all_data = os.listdir(key_dor)
-    index = 0
+    all_data = os.listdir(key_dir)
+    
+    # initialize progress bar
+    maxval = len(all_data)
+    count = 0
+    widgets = ['calculate reuse distances ', Percentage(), '', Bar('#'), '', '', '', '', '', FileTransferSpeed()]
+    pbar = ProgressBar(widgets=widgets, maxval=maxval).start()
+    
     for data_path in all_data:
-        df = pd.read_csv(key_dor + data_path, dtype=dtype)
+        df = pd.read_csv(key_dir + data_path, dtype=dtype)
         df['last_seen'] = df['global_index'].shift(1)
 
         df['reuse_distance'] = df['global_index'] - df['last_seen']
@@ -131,9 +141,11 @@ def calculate_reuse_distances(key_dor):
         reuse_distance[COLD].extend(df[df["temperature"] == COLD]["reuse_distance"].to_list())
         reuse_distance[OTHER].extend(df[df["temperature"] == OTHER]["reuse_distance"].to_list())
         reuse_distance[NOT_CONSIDER].extend(df[df["temperature"] == NOT_CONSIDER]["reuse_distance"].to_list())
-        print("key", index)
-        index += 1
 
+        pbar.update(count)
+        count += 1
+
+    pbar.finish()
     del df
     gc.collect()
     return reuse_distance

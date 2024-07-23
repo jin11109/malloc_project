@@ -63,13 +63,9 @@ Due to the previously mentioned issue of having more than one versions of malloc
 We set the highest five bits of the **"heap_info"** **size** field to **"0b10101"** as below.
 
         struct heap_info 
-    
         |+-+-+-+-+-+-+-+-+-+- ar_ptr +-+-+-+-+-+-+-+-+-+-|
-
         |+-+-+-+-+-+-+-+-+-+- *prev +-+-+-+-+-+-+-+-+-+-+|
-    
         |1|0|1|0|1|+-+-+-+-+-+ size +-+-+-+-+-+-+-+-+-+-+|
-
         |+-+-+-+-+-+-+-+-+-+-+ pad +-+-+-+-+-+-+-+-+-+-+-|
 
 

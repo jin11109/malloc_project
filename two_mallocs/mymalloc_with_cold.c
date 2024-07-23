@@ -45,6 +45,14 @@ void* realloc(void* addr, size_t size) {
     void* return_addr = __builtin_extract_return_addr(__builtin_return_address(
         0)); // value of 0 yields return address of the current function
 
+    // like malloc
+    if (!addr) { 
+        if (is_cold(return_addr))
+            return unable_flag(_my_realloc(addr, size));
+        else
+            return unable_flag(_my2_realloc(addr, size));
+    }
+
     void* ptr = _my_realloc(addr, size);
     if (is_flag_notmy(ptr)) {
         void* ptr2 = _my2_realloc(addr, size);

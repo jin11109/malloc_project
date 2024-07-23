@@ -82,7 +82,7 @@ gzip -d ./data/cachemisses.csv.gz
 sed -i '1i addr,pid' ./data/cachemisses.csv
 
 # caculate page reuse distance and output files in result_picture
-#python3 ./data_reusedistance.py
+python3 ./data_reusedistance.py
 
 rm ./fifo_preload
 echo 1 | sudo tee /proc/sys/kernel/randomize_va_space > /dev/null
