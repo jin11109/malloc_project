@@ -202,9 +202,9 @@ def main():
     with open("./result/other_reuse_distance_time.json", 'r') as file:
         reuse_distance = json.load(file)
         output(reuse_distance, "other_reuse_distance_time")
-    with open("./result/not_condider_reuse_distance_time.json", 'r') as file:
-        reuse_distance = json.load(file)
-        output(reuse_distance, "not_condider_reuse_distance_time")
+    # with open("./result/not_condider_reuse_distance_time.json", 'r') as file:
+    #     reuse_distance = json.load(file)
+    #     output(reuse_distance, "not_condider_reuse_distance_time")
     
 if __name__ == "__main__":
     plt.rcParams["axes.formatter.useoffset"] = False

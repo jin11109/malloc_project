@@ -172,9 +172,9 @@ def main():
     with open("./result/other_reuse_distance_space.json", 'r') as file:
         reuse_distance = json.load(file)
         output(reuse_distance, "other_reuse_distance_space")
-    with open("./result/not_condider_reuse_distance_space.json", 'r') as file:
-        reuse_distance = json.load(file)
-        output(reuse_distance, "not_condider_reuse_distance_space")
+    # with open("./result/not_condider_reuse_distance_space.json", 'r') as file:
+    #     reuse_distance = json.load(file)
+    #     output(reuse_distance, "not_condider_reuse_distance_space")
     
 if __name__ == "__main__":
     plt.rcParams["axes.formatter.useoffset"] = False
