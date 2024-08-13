@@ -75,7 +75,7 @@ def compare_reusedist(two_reuse_distance, one_reuse_distance):
     plt.axhline(0, color='gray', linestyle='--', linewidth=1)
     axs[1].set_xticks(range(0, 100 + 1, 10))
     axs[1].axhline(0, color='gray', linestyle='--', linewidth=1)
-    axs[1].set_title('The reduction of page faults after separating cold ma-calller\nfrom other ma-caller under different memory pressure')
+    axs[1].set_title('The reduction of page faults after separating cold ma-calllers\nfrom other ma-callers under different memory pressure')
     axs[1].set_ylabel('Reduction of page faults(%)')
     axs[1].set_xlabel('Memory pressure(%)')
     plt.savefig("./compare_reusedist_pagefault")

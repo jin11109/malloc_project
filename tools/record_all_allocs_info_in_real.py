@@ -75,7 +75,12 @@ def record_allocs(allocs_info):
     fig, axs = plt.subplots(1, 2, figsize=(15, 6), gridspec_kw={'bottom': 0.3, 'top': 0.9})
     plt.subplots_adjust(wspace=0.3)
 
-    classifications = ["cold", "unsampled", "other"]
+    classifications = ["cold", "other", "unsampled"]
+    rename_label = {
+        "cold" : "cold ma-callers",
+        "other" : "other ma-callers",
+        "unsampled" : "ma-callers have no data"
+    }
     labels = []
     titles = []
     data = []
@@ -85,19 +90,20 @@ def record_allocs(allocs_info):
     lifetime_objsize_product_sum = allocs_info.lifetime_objsize_product_sum()
     for classification in classifications:
         data.append(allocs_info.classify[classification].count / count_alloc_sum * 100)
-        titles.append("count of allocs")
-        labels.append(classification)
+        titles.append("count of ma-callers")
+        labels.append(rename_label[classification])
 
         data.append(allocs_info.classify[classification].total_alloc_size / total_alloc_size_sum * 100)
-        titles.append("total alloc size")
-        labels.append(classification)
+        titles.append("total alloc size\nof ma-callers")
+        labels.append(rename_label[classification])
 
         data.append(allocs_info.classify[classification].lifetime_objsize_product / lifetime_objsize_product_sum * 100)
-        titles.append("production of\nlifetime and objs size")
-        labels.append(classification)
+        #titles.append("production of\nlifetime and objs size")
+        titles.append("memory occupation")
+        labels.append(rename_label[classification])
 
-    sns.barplot(x=titles, y=data, hue=labels, ax=axs[0], estimator=sum, errorbar=None)
-    axs[0].set_ylabel("Propotion")
+    sns.barplot(x=titles, y=data, hue=labels, ax=axs[0], estimator=sum, errorbar=None, palette=sns.color_palette("deep"))
+    axs[0].set_ylabel("propotion(%)")
     #axs[0].bar_label(axs[0].containers[0])
     for container in axs[0].containers:
         labels = [f"{float(v.get_height()):.2f}%" for v in container]
