@@ -73,6 +73,8 @@ def compare_reusedist(two_reuse_distance, one_reuse_distance):
     fig, axs = plt.subplots(1, 2, figsize=(15, 6), gridspec_kw={'bottom': 0.3, 'top': 0.9})
     sns.lineplot(x=x_data, y=reduction_percentage[0 : end_of_ten_percenatge], ax=axs[1])
     plt.axhline(0, color='gray', linestyle='--', linewidth=1)
+    axs[1].text(x_data[0] + 2, reduction_percentage[0] + 8, f'({x_data[0]}%, {reduction_percentage[0]}%)', fontsize=10, color='darkblue', ha='right')
+    axs[1].plot(x_data[0], reduction_percentage[0], 'o', color='darkblue')
     axs[1].set_xticks(range(0, 100 + 1, 10))
     axs[1].axhline(0, color='gray', linestyle='--', linewidth=1)
     axs[1].set_title('The reduction of page faults after separating cold ma-calllers\nfrom other ma-callers under different memory pressure')
