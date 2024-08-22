@@ -79,7 +79,7 @@ python3 ./data_record.py &
 wait
 
 gzip -d ./data/cachemisses.csv.gz 
-sed -i '1i addr,pid' ./data/cachemisses.csv
+sed -i '1i pid,addr' ./data/cachemisses.csv
 
 # caculate page reuse distance and output files in result_picture
 python3 ./data_reusedistance_space.py
