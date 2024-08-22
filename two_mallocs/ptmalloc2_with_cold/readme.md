@@ -5,7 +5,7 @@ This package is a modified version of Wolfram Gloger's ptmalloc2 (http://www.mal
 
 ### Our target :
 
-We want to customize this ptmalloc2 to handle allocation requests from specific addresses, ensuring that it does not conflict with the native glibc malloc on the system.
+We want to customize this ptmalloc2 to handle allocation requests from specific addresses, ensuring that it does not conflict with the native glibc malloc or multiple ptmalloc2 on the system.
 We will list our modification in final part.
 
 Quick start
