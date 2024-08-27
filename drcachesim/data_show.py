@@ -19,6 +19,7 @@ from scipy.stats import wasserstein_distance
 import json
 import argparse
 import shutil
+import random
 
 class Alloc:
     def __init__(self, alloc_temper):
@@ -85,6 +86,7 @@ INTERVAL_TIME_BOUND = (0.20, 0.60)
 INTERVAL_TIME_PROPOTION_THRESHOLD = 0.001
 HIT_LIFETIME_PERCENTAGE_BOUND = (20, 70)
 HIT_LIFETIME_BOUND_PROPOTION_THRESHOLD = 0.001
+OBJ_SIMILARITY_SELECTNUM = 50
 alloc_type_mapping = {
     "m" : "malloc",
     "r" : "realloc",
@@ -499,6 +501,25 @@ def record_size_with_no_event(pid, df_not):
     sns.barplot(data=indicate, x="caller_total_alloc_size", y="caller_addr_str")
     plt.savefig("./result_picture/" + str(pid) + "_no_event_size" + ".png")
 
+def record_obj_similarity(indexs, malloc_objs, df_per_malloc, savepath):
+    fig, axs = plt.subplots(1, 2, figsize=(14, 8), gridspec_kw={'bottom': 0.1, 'top': 0.9})
+    objs_performance = []
+    objs_index = []
+    for index in indexs:
+        obj = malloc_objs[index]
+        mask = df_per_malloc["data_addr"] == obj
+        df_obj = df_per_malloc[mask]
+        obj_interval = df_obj["hit_relative_time"].to_numpy()
+        obj_performance = list(obj_interval.copy())
+        objs_performance += obj_performance
+        objs_index += [str(index)] * len(obj_performance)
+    sns.stripplot(x=objs_performance, y=objs_index, ax=axs[0], jitter=False, s=5, marker="o", linewidth=1, alpha=.35)
+    axs[0].set_xlim(-1, 101)
+    axs[0].set_xlabel('Cache Miss Occurring Across lifetime of object (%)')
+    axs[0].set_ylabel('Index of Objects')
+    plt.savefig(savepath)
+    plt.close(fig)
+
 # statistics interval hit time and some information, then call other funcs to save pictures
 def statistics(df_per_malloc, df_myaf, filter_flag, savepath, interval_data):
     global endtime
@@ -515,9 +536,6 @@ def statistics(df_per_malloc, df_myaf, filter_flag, savepath, interval_data):
     obj_sizes = []
     obj_sizes_128kfilter = []
     statistics_hits = []
-
-    if not Path(savepath + "_obj").exists():
-        os.makedirs(savepath + "_obj")
 
     # for every objects calculate the interval hit time
     def process_obj(indexs, statistics_hits_local, intervals_local, intervals_128kfilter_local):
@@ -560,38 +578,47 @@ def statistics(df_per_malloc, df_myaf, filter_flag, savepath, interval_data):
 
             statistics_hits_local.append(len(obj_performance_without_lifetime))
 
-    # if there is so many obj in this malloc
-    # use multithreading to calculate
-    if len(malloc_objs) > 100:
-        thread_num = 16
-        split_index = list(malloc_objs.keys())
-        split_index = np.array_split(split_index, thread_num)
-        statistics_hits_locals = [[] for _ in range(thread_num)]
-        intervals_locals = [[] for _ in range(thread_num)]
-        intervals_128kfilter_local = [[] for _ in range(thread_num)]
-        threads = []
-        for i in range(thread_num):
-            thread = threading.Thread(target=process_obj, args=(split_index[i], statistics_hits_locals[i], intervals_locals[i], intervals_128kfilter_local[i]))
-            threads.append(thread)
-            thread.start()
+    # just show objects
+    if args.just_show_obj_similarity:
+        random_index = random.sample(malloc_objs.keys(), OBJ_SIMILARITY_SELECTNUM)
+        record_obj_similarity(random_index, malloc_objs, df_per_malloc, savepath + "_obj_similarity")
+        return
+    
+    else:            
+        if not Path(savepath + "_obj").exists():
+            os.makedirs(savepath + "_obj")
+        # if there is so many obj in this malloc
+        # use multithreading to calculate
+        if len(malloc_objs) > 100:
+            thread_num = 16
+            split_index = list(malloc_objs.keys())
+            split_index = np.array_split(split_index, thread_num)
+            statistics_hits_locals = [[] for _ in range(thread_num)]
+            intervals_locals = [[] for _ in range(thread_num)]
+            intervals_128kfilter_local = [[] for _ in range(thread_num)]
+            threads = []
+            for i in range(thread_num):
+                thread = threading.Thread(target=process_obj, args=(split_index[i], statistics_hits_locals[i], intervals_locals[i], intervals_128kfilter_local[i]))
+                threads.append(thread)
+                thread.start()
 
-        # wait for all threads
-        for thread in threads:
-            thread.join()
-        
-        for i in range(thread_num):
-            statistics_hits += statistics_hits_locals[i]
-            intervals += intervals_locals[i]
-            intervals_128kfilter += intervals_128kfilter_local[i]
+            # wait for all threads
+            for thread in threads:
+                thread.join()
+            
+            for i in range(thread_num):
+                statistics_hits += statistics_hits_locals[i]
+                intervals += intervals_locals[i]
+                intervals_128kfilter += intervals_128kfilter_local[i]
 
-    # else use original ways
-    else:
-        process_obj(list(malloc_objs.keys()), statistics_hits, intervals, intervals_128kfilter)
+        # else use original ways
+        else:
+            process_obj(list(malloc_objs.keys()), statistics_hits, intervals, intervals_128kfilter)
 
-    try:
-        os.rmdir(savepath + "_obj")
-    except:
-        None
+        try:
+            os.rmdir(savepath + "_obj")
+        except:
+            None
 
     # statistics some information
     
@@ -832,6 +859,10 @@ def main():
                             with open(sampled_dir_path + '/' + data, 'r') as file:
                                 interval_data = json.load(file)
                 else:
+                    if args.just_show_obj_similarity:
+                        if (float(per_caller_info["lifetimemax"].to_string(index=False)) < LIFE_TIME_THRESHOLD) or \
+                            (float(per_caller_info["count_of_objs"].to_string(index=False)) < OBJ_SIMILARITY_SELECTNUM):
+                            continue
                     statistics(df[mask2], df_myaf[mask3], filter_flag, savepath, interval_data)
 
                 # test if the malloc is cold with our policy
@@ -865,9 +896,10 @@ if __name__ == "__main__":
     # Turn off the automatic using scientific notation at axis lable
     plt.rcParams['axes.formatter.useoffset'] = False
 
-    parser = argparse.ArgumentParser(usage="python3 ./data_show --just_filter_malloc [False] --debug [False]")
+    parser = argparse.ArgumentParser(usage="python3 ./data_show --just_filter_malloc [False] --debug [False] --just_show_obj_similarity [False]")
     parser.add_argument('--just_filter_malloc', type=bool, default=False, help="[True / False]")
     parser.add_argument('--debug', type=bool, default=False, help="[True / False]")
+    parser.add_argument('--just_show_obj_similarity', type=bool, default=False, help="[True / False]")
     args = parser.parse_args()
     
     main()
