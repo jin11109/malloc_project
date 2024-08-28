@@ -16,7 +16,7 @@ while len(path) != 0:
     path = input("input cold dir path, if done just press enter:\n")
 path = input("input all dir path:\n")
 while len(path) != 0:
-    cold_dir.append(path)
+    all_dir.append(path)
     path = input("input all dir path, if done just press enter:\n")
 
 for path in cold_dir:
@@ -38,9 +38,10 @@ for addr in cold_addr:
     cold_offset[offset] = True
 errorflag = False
 for addr in other_addr:
-    offset = addr & (PAGE_SIZE - 1)
+    offset = int(addr, 16) & (PAGE_SIZE - 1)
     if cold_offset.get(offset):
         errorflag = True
         print("other addr :", addr, "\noffset :", offset)
+
 if errorflag == False:
     print("ok")
