@@ -34,11 +34,11 @@ for path in all_dir:
                 other_addr[output[1]] = True
 
 for addr in cold_addr:
-    offset = int(addr, 16) // PAGE_SIZE
+    offset = int(addr, 16) & (PAGE_SIZE - 1)
     cold_offset[offset] = True
 errorflag = False
 for addr in other_addr:
-    offset = addr // PAGE_SIZE
+    offset = addr & (PAGE_SIZE - 1)
     if cold_offset.get(offset):
         errorflag = True
         print("other addr :", addr, "\noffset :", offset)
