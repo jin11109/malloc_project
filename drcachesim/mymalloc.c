@@ -174,173 +174,32 @@ void print_num(long long int num) {
 */
 
 void print_info_newpool(pid_t pid, void* begin, void* end, void* malloc_addr) {
-    char end_s[30], begin_s[30], pid_s[10], malloc_addr_s[30], time_s[30],
-        buffer[140];
-    int endlen, beginlen, pidlen, maddrlen, timelen;
-    endlen = addr_to_string(end, end_s);
-    beginlen = addr_to_string(begin, begin_s);
-    pidlen = num_to_string(pid, pid_s);
-    maddrlen = addr_to_string(malloc_addr, malloc_addr_s);
-
-    /*
-    struct timespec ts;
-    clock_gettime(CLOCK_MONOTONIC, &ts);
-    unsigned long long time = ts.tv_sec * 1000000 + ts.tv_nsec / 1000;
-    */
     struct timeval t;
     gettimeofday(&t, NULL);
     unsigned long long time = t.tv_sec * 1000000 + t.tv_usec;
-
-    timelen = num_to_string(time, time_s);
-
-    int index = 0;
-    buffer[index++] = 'm';
-    buffer[index++] = 'y';
-    buffer[index++] = 'i';
-    buffer[index++] = ' ';
-
-    for (int i = 0; i < pidlen; i++) {
-        buffer[index + i] = pid_s[i];
-    }
-    index += pidlen;
-    buffer[index++] = ' ';
-
-    for (int i = 0; i < beginlen; i++) {
-        buffer[index + i] = begin_s[i];
-    }
-    index += beginlen;
-    buffer[index++] = ' ';
-
-    for (int i = 0; i < endlen; i++) {
-        buffer[index + i] = end_s[i];
-    }
-    index += endlen;
-    buffer[index++] = ' ';
-
-    for (int i = 0; i < maddrlen; i++) {
-        buffer[index + i] = malloc_addr_s[i];
-    }
-    index += maddrlen;
-    buffer[index++] = ' ';
-
-    for (int i = 0; i < timelen; i++) {
-        buffer[index + i] = time_s[i];
-    }
-    index += timelen;
-    buffer[index++] = '\n';
-
-    int wsize = write(2, buffer, index);
+    
+    fprintf(stderr, "myi %d %p %p %p %lld\n", pid, begin, end, malloc_addr, time);
 }
 
 void print_info_free(pid_t pid, void* addr) {
-    char addr_s[30], pid_s[10], time_s[30], buffer[110];
-    int addrlen, pidlen, timelen;
-    addrlen = addr_to_string(addr, addr_s);
-    pidlen = num_to_string(pid, pid_s);
-
-    /*
-    struct timespec ts;
-    clock_gettime(CLOCK_MONOTONIC, &ts);
-    unsigned long long time = ts.tv_sec * 1000000 + ts.tv_nsec / 1000;
-    */
     struct timeval t;
     gettimeofday(&t, NULL);
     unsigned long long time = t.tv_sec * 1000000 + t.tv_usec;
 
-    timelen = num_to_string(time, time_s);
-
-    int index = 0;
-    buffer[index++] = 'm';
-    buffer[index++] = 'y';
-    buffer[index++] = 'f';
-    buffer[index++] = ' ';
-
-    for (int i = 0; i < pidlen; i++) {
-        buffer[index + i] = pid_s[i];
-    }
-    index += pidlen;
-    buffer[index++] = ' ';
-
-    for (int i = 0; i < addrlen; i++) {
-        buffer[index + i] = addr_s[i];
-    }
-    index += addrlen;
-    buffer[index++] = ' ';
-
-    for (int i = 0; i < timelen; i++) {
-        buffer[index + i] = time_s[i];
-    }
-    index += timelen;
-    buffer[index++] = '\n';
-
-    int wsize = write(2, buffer, index);
+    fprintf(stderr, "myf %d %p %lld\n", pid, addr, time);
 }
 
 void print_info_alloc(pid_t pid, size_t size, void* addr, void* malloc_addr, char alloc_type) {
+    // Because big size of allocatd memory will be alloced by mmap directly
     if (big_alloc_flag) {
         big_alloc_flag = 0;
         return;
     }
-    char addr_s[30], pid_s[10], size_s[30], malloc_addr_s[30], time_s[30],
-        buffer[140];
-    int addrlen, pidlen, sizelen, maddrlen, timelen;
-    addrlen = addr_to_string(addr, addr_s);
-    pidlen = num_to_string(pid, pid_s);
-    sizelen = num_to_string(size, size_s);
-    maddrlen = addr_to_string(malloc_addr, malloc_addr_s);
-    /*
-    struct timespec ts;
-    clock_gettime(CLOCK_MONOTONIC, &ts);
-    unsigned long long time = ts.tv_sec * 1000000 + ts.tv_nsec / 1000;
-    */
     struct timeval t;
     gettimeofday(&t, NULL);
     unsigned long long time = t.tv_sec * 1000000 + t.tv_usec;
 
-    timelen = num_to_string(time, time_s);
-
-    int index = 0;
-    buffer[index++] = 'm';
-    buffer[index++] = 'y';
-    buffer[index++] = 'a';
-    buffer[index++] = ' ';
-
-    for (int i = 0; i < pidlen; i++) {
-        buffer[index + i] = pid_s[i];
-    }
-    index += pidlen;
-    buffer[index++] = ' ';
-
-    for (int i = 0; i < sizelen; i++) {
-        buffer[index + i] = size_s[i];
-    }
-    index += sizelen;
-    buffer[index++] = ' ';
-
-    for (int i = 0; i < addrlen; i++) {
-        buffer[index + i] = addr_s[i];
-    }
-    index += addrlen;
-    buffer[index++] = ' ';
-
-    for (int i = 0; i < maddrlen; i++) {
-        buffer[index + i] = malloc_addr_s[i];
-    }
-    index += maddrlen;
-    buffer[index++] = ' ';
-
-    for (int i = 0; i < timelen; i++) {
-        buffer[index + i] = time_s[i];
-    }
-    index += timelen;
-    buffer[index++] = ' ';
-
-    // record is malloc or realloc or calloc
-    buffer[index++] = alloc_type;
-
-    buffer[index++] = '\n';
-
-    int wsize = write(2, buffer, index);
+    fprintf(stderr, "mya %d %lu %p %p %lld %c\n", pid, size, addr, malloc_addr, time, alloc_type);
 }
 
 /*============================ memory pool operations ======================
