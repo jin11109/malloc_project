@@ -10,11 +10,11 @@ other_addr = {}
 cold_offset = {}
 other_offset = {}
 
-path = input("input cold dir path, if done just press enter:\n")
+path = input("input cold dir path:\n")
 while len(path) != 0:
     cold_dir.append(path)
     path = input("input cold dir path, if done just press enter:\n")
-path = input("input all dir path, if done just press enter:\n")
+path = input("input all dir path:\n")
 while len(path) != 0:
     cold_dir.append(path)
     path = input("input all dir path, if done just press enter:\n")
