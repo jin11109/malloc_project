@@ -52,7 +52,7 @@ def compare_reusedist(two_reuse_distance, one_reuse_distance):
         variation_raw.append(count2 - count1)
         if count1 != 0:
             reduction_percentage.append(round((count2 - count1) / count1 * 100, 3) * -1)
-        else:
+        if count1 == 0 or count2 == 0:
             if end_of_cum == -1:
                 end_of_cum = index
             reduction_percentage.append(0)
@@ -60,18 +60,17 @@ def compare_reusedist(two_reuse_distance, one_reuse_distance):
 
     x_data = []
     index = 0
-    end_of_ten_percenatge = 0
+    end_of_x = len(bin_edges[0 : -(max_value - end_of_cum) - 1])
     for i in bin_edges[0 : -(max_value - end_of_cum) - 1]:
         index += 1
-        mem_pressure = (max_value - i) / max_value * 100
+        mem_pressure = abs((max_value - i) / max_value * 100)
         # Don't consider the data smaller than 5% memory persure
         if mem_pressure < 5:
-            end_of_ten_percenatge = index - 1
+            end_of_x = index - 1
             break
         x_data.append(mem_pressure)
-
     fig, axs = plt.subplots(1, 2, figsize=(15, 6), gridspec_kw={'bottom': 0.3, 'top': 0.9})
-    sns.lineplot(x=x_data, y=reduction_percentage[0 : end_of_ten_percenatge], ax=axs[1])
+    sns.lineplot(x=x_data, y=reduction_percentage[0 : end_of_x], ax=axs[1])
     plt.axhline(0, color='gray', linestyle='--', linewidth=1)
     axs[1].text(x_data[0] + 2, reduction_percentage[0] + 8, f'({x_data[0]}%, {reduction_percentage[0]}%)', fontsize=10, color='darkblue', ha='right')
     axs[1].plot(x_data[0], reduction_percentage[0], 'o', color='darkblue')
