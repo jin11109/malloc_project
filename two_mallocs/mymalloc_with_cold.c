@@ -11,8 +11,12 @@
 /* include for array of cold mallocs' address */
 #include "cold_addrs.h"
 
+#define TABLESIZE 4096 * 16
 #define PAGESIZE 4096
-#define is_cold(p) (cold_addrs[(((uintptr_t)(p)) & (PAGESIZE - 1))])
+#define is_cold(p) ((cold_addrs_page[(((uintptr_t)(p)) & (PAGESIZE - 1))] == \
+                    1)? 1: ((cold_addrs[(((uintptr_t)(p)) & (TABLESIZE - 1))] \
+                     == 1)? 1 : 0))
+//#define GET_ADDR_TABLE
 
 /*
  * This structure is defined in malloc.c. We move this to here because we
@@ -34,6 +38,9 @@ void* malloc(size_t bytes) {
         0)); // value of 0 yields return address of the current function
     if (is_cold(return_addr)) {
         void* ptr = _my_malloc(bytes);
+#ifdef GET_ADDR_TABLE
+        fprintf(stderr, "%p %lu\n", return_addr, bytes);
+#endif
         return unable_flag(ptr);
     } else {
         void* ptr = _my2_malloc(bytes);
@@ -47,9 +54,12 @@ void* realloc(void* addr, size_t size) {
 
     // like malloc
     if (!addr) { 
-        if (is_cold(return_addr))
+        if (is_cold(return_addr)){
+#ifdef GET_ADDR_TABLE
+            fprintf(stderr, "%p %lu\n", return_addr, size);
+#endif
             return unable_flag(_my_realloc(addr, size));
-        else
+        } else
             return unable_flag(_my2_realloc(addr, size));
     }
 
@@ -93,6 +103,9 @@ void* calloc(size_t nmemb, size_t size) {
         0)); // value of 0 yields return address of the current function
     if (is_cold(return_addr)) {
         void* ptr = _my_calloc(nmemb, size);
+#ifdef GET_ADDR_TABLE
+        fprintf(stderr, "%p %lu\n", return_addr, size * nmemb);
+#endif
         return unable_flag(ptr);
     } else {
         void* ptr = _my2_calloc(nmemb, size);

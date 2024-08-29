@@ -2,7 +2,7 @@ import os
 import re
 import csv
 
-PAGE_SIZE = 4096
+TABLE_SIZE = 4096 * 16
 cold_dir = []
 all_dir = []
 cold_addr = {}
@@ -34,11 +34,11 @@ for path in all_dir:
                 other_addr[output[1]] = True
 
 for addr in cold_addr:
-    offset = int(addr, 16) & (PAGE_SIZE - 1)
+    offset = int(addr, 16) & (TABLE_SIZE - 1)
     cold_offset[offset] = True
 errorflag = False
 for addr in other_addr:
-    offset = int(addr, 16) & (PAGE_SIZE - 1)
+    offset = int(addr, 16) & (TABLE_SIZE - 1)
     if cold_offset.get(offset):
         errorflag = True
         print("other addr :", addr, "\noffset :", offset)
