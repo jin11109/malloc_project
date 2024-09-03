@@ -20,12 +20,13 @@ if file_exists:
 else:
     data = [
         ['pid_in_drcachesim', 'pid_real', 'alloc_index_in_drcachesim', 'alloc_addr_in_drcachesim', 
-         'alloc_addr_real', 'alloc_index_real', 'temperature', 'symbol', 'position', 'mark', 'two_malloc'],
+         'alloc_addr_real', 'alloc_index_real', 'temperature', 'symbol', 'position', 'mark', 
+         'two_malloc', 'real_machine'],
     ]
 
 result.sort()
 for i in result:
-    per_data = [pid, None, i[0], i[1], None, None, temperature, None, None, None, None]
+    per_data = [pid, None, i[0], i[1], None, None, temperature, None, None, None, None, None]
     data.append(per_data)
 
 

@@ -24,11 +24,11 @@ def main():
         for row in df.itertuples():
             if row.temperature != "cold":
                 continue
-            if pd.isna(row.two_malloc):
+            if pd.isna(row.real_machine):
                 cold_addrs_page_flag[row.page_index] = 1
             else:
                 cold_addrs_page_flag[row.page_index] = 0
-                cold_addrs_flag[int(row.two_malloc, 16) & (TABLE_SIZE - 1)] = 1
+                cold_addrs_flag[int(row.real_machine, 16) & (TABLE_SIZE - 1)] = 1
 
         with open("cold_addrs.h", 'w') as f:
             f.write(
