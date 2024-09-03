@@ -1,0 +1,37 @@
+version: '2.4'
+
+services:
+  netsurf:
+    build:
+      context: .
+      dockerfile: ./dockers/netsurf/Dockerfile
+    mem_limit: 1g # Set memory limit to 'mem_limit'
+    memswap_limit: 4g # Set total memory + swap to 'memswap_limit' ('memswap_limit' - 'mem_limit' swap space)
+    mem_swappiness: 100
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix # Share the X11 unix socket
+    environment:
+      - DISPLAY=:0.0
+    network_mode: "host"  # Use the host network mode
+    devices:
+      - "/dev/snd:/dev/snd"
+    restart: "no" # Do not automatically restart the container after playback ends
+    command: ["./program", "netsurf"]
+
+  mpv:
+    build:
+      context: .
+      dockerfile: ./dockers/mpv/Dockerfile
+    mem_limit: 1g
+    memswap_limit: 4g
+    mem_swappiness: 100
+    volumes:
+      - /home/jin/resource:/opt/resource
+      - /tmp/.X11-unix:/tmp/.X11-unix
+    environment:
+      - DISPLAY=:0.0
+    network_mode: "host"
+    devices:
+      - "/dev/snd:/dev/snd"
+    restart: "no"
+    command: ["mpv", "/opt/resource/testmovie_720p17min.mkv"]
