@@ -180,10 +180,10 @@ def main():
         df_other = df_heap[df_heap["version_key"] == OTHER_HEAP]
 
         # processing cachemisses
-        add_temperature_col(df_cold, df_other, input_path="./data/cachemisses.csv", output_path="./result/cachemisses_time.csv")
-        add_index_col(input_path="./result/cachemisses_time.csv", output_path="./result/cachemisses_with_index.csv")
-        build_key_groups(key_dir="./result/reusedist_keys/", input_path="./result/cachemisses_with_index.csv")
-        reuse_distance = calculate_reuse_distances(key_dir="./result/reusedist_keys/")
+        add_temperature_col(df_cold, df_other, input_path="./data/cachemisses.csv", output_path="./data/cachemisses_time.csv")
+        add_index_col(input_path="./data/cachemisses_time.csv", output_path="./data/cachemisses_with_index.csv")
+        build_key_groups(key_dir="./data/reusedist_keys/", input_path="./data/cachemisses_with_index.csv")
+        reuse_distance = calculate_reuse_distances(key_dir="./data/reusedist_keys/")
 
         with open("./result/cold_reuse_distance_time.json", 'w') as file:
             json.dump(reuse_distance[COLD], file)
