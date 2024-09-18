@@ -20,44 +20,8 @@ import json
 import argparse
 import shutil
 import random
-
-class Alloc:
-    def __init__(self, alloc_temper):
-        self.total_alloc_size = 0
-        self.lifetime_objsize_product = 0
-        self.count = 0
-        self.total_hits = 0
-        self.temper = alloc_temper
-
-class Allocs_info:
-    def __init__(self, pid):
-        self.pid = pid
-        # "cold", "other" are include in "sampled" 
-        self.classification = ["cold", "unsampled", "other", "sampled"]
-        self.classify = {}
-        for i in self.classification:
-            self.classify[i] = Alloc(i)
-    
-    def count_alloc_sum(self):
-        temp = 0
-        for i in self.classification:
-            if i != "sampled":
-                temp += self.classify[i].count
-        return temp
-
-    def total_alloc_size_sum(self):
-        temp = 0
-        for i in self.classification:
-            if i != "sampled":
-                temp += self.classify[i].total_alloc_size
-        return temp
-    
-    def lifetime_objsize_product_sum(self):
-        temp = 0
-        for i in self.classification:
-            if i != "sampled":
-                temp += self.classify[i].lifetime_objsize_product
-        return temp
+import math
+import copy
 
 dtype = {
     "caller_addr" : int,
@@ -87,6 +51,11 @@ INTERVAL_TIME_PROPOTION_THRESHOLD = 0.001
 HIT_LIFETIME_PERCENTAGE_BOUND = (20, 70)
 HIT_LIFETIME_BOUND_PROPOTION_THRESHOLD = 0.001
 OBJ_SIMILARITY_SELECTNUM = 50
+BATHTUB_UPPER_BOUND = 99
+BATHTUB_LOWER_BOUND = 1
+
+CONTINUE_NUM = 100000
+
 alloc_type_mapping = {
     "m" : "malloc",
     "r" : "realloc",
@@ -415,49 +384,6 @@ def record_malloc(df_abs, df_lifetime, df_rel, per_caller_info, long_lifetime_pr
 
     record_malloc_with_realtime(df_abs, savepath)
 
-def record_mallocs(allocs_info, savepath):
-    fig, axs = plt.subplots(1, 2, figsize=(15, 6), gridspec_kw={'bottom': 0.3, 'top': 0.9})
-    plt.subplots_adjust(wspace=0.3)
-
-    classifications = ["cold", "unsampled", "other"]
-    labels = []
-    titles = []
-    data = []
-
-    count_alloc_sum = allocs_info.count_alloc_sum()
-    total_alloc_size_sum = allocs_info.total_alloc_size_sum()
-    lifetime_objsize_product_sum = allocs_info.lifetime_objsize_product_sum()
-    for classification in classifications:
-        data.append(allocs_info.classify[classification].count / count_alloc_sum * 100)
-        titles.append("count of allocs")
-        labels.append(classification)
-
-        data.append(allocs_info.classify[classification].total_alloc_size / total_alloc_size_sum * 100)
-        titles.append("total alloc size")
-        labels.append(classification)
-
-        data.append(allocs_info.classify[classification].lifetime_objsize_product / lifetime_objsize_product_sum * 100)
-        titles.append("production of\nlifetime and objs size")
-        labels.append(classification)
-
-    sns.barplot(x=titles, y=data, hue=labels, ax=axs[0], estimator=sum, errorbar=None)
-    axs[0].set_ylabel("Propotion")
-    #axs[0].bar_label(axs[0].containers[0])
-    for container in axs[0].containers:
-        labels = [f"{float(v.get_height()):.2f}%" for v in container]
-        axs[0].bar_label(container, labels=labels)
-
-    mallocs_info = f"allocs information (pid : {allocs_info.pid})"\
-        + "\n" + "|  count of allocs : " + f"cold({allocs_info.classify['cold'].count}),  unsampled({allocs_info.classify['unsampled'].count}),  other({allocs_info.classify['other'].count})" \
-        + "\n" + "|  total alloc size : " + f"cold({allocs_info.classify['cold'].total_alloc_size}),  unsampled({allocs_info.classify['unsampled'].total_alloc_size}),  other({allocs_info.classify['other'].total_alloc_size})" \
-        + "\n" + "|  production of lifetime and objs size : " + f"cold({allocs_info.classify['cold'].lifetime_objsize_product:.2f}),  unsampled({allocs_info.classify['unsampled'].lifetime_objsize_product:.2f}),  other({allocs_info.classify['other'].lifetime_objsize_product:.2f})" \
-        + "\n" + f"|  Count of total hits for PID({allocs_info.pid}) : " + str(allocs_info.classify["sampled"].total_hits)
-
-    fig.text(0.2, 0.2,  mallocs_info, ha='left', va='top', fontsize=10, color='blue')
-
-    plt.savefig(savepath)
-    plt.close(fig)
-
 # save the picture shows that the lifetime and size of each objs alloced from this malloc
 def record_objs_with_no_event(df_myaf, savepath):
 
@@ -647,50 +573,311 @@ def statistics(df_per_malloc, df_myaf, filter_flag, savepath, interval_data):
     with open(savepath + "_interval_data.json", 'w') as file:
         json.dump(interval_data, file)
 
-# the policy of test if a malloc is cold or not    
-def is_cold_malloc(df_rel, filter_flag):
+def record_score_global_data(global_data):
+    global endtime
+    hit_bin_edges = np.linspace(0, 100, 1001)
+    hit_bin_centers = (hit_bin_edges[:-1] + hit_bin_edges[1:]) / 2
+    lifetime_bin_edges = np.linspace(0, endtime, 1001)
+    lifetime_bin_centers = (lifetime_bin_edges[:-1] + lifetime_bin_edges[1:]) / 2
+    lifetime_bin_centers = [round(num) for num in lifetime_bin_centers]
+    #save picture
+    fig, axs = plt.subplots(1, 2, figsize=(18, 9), gridspec_kw={'bottom': 0.3, 'top': 0.9}, dpi=300)
+    sns.lineplot(x=hit_bin_centers, y=global_data["total_hit_hist"], ax=axs[0], linewidth = 2)
+    axs[0].fill_between(hit_bin_centers, global_data["total_hit_hist"], 0, alpha=0.5)
+
+    axs[0].axvline(x=BATHTUB_LOWER_BOUND, color='red', linestyle='--', linewidth=1.5)
+    axs[0].axvline(x=BATHTUB_UPPER_BOUND, color='red', linestyle='--', linewidth=1.5)
+    axs[0].annotate(f'x={BATHTUB_LOWER_BOUND}', xy=(BATHTUB_LOWER_BOUND, axs[0].get_ylim()[1]), xytext=(5, 5),
+                    textcoords='offset points', color='red', fontsize=14,
+                    arrowprops=dict(arrowstyle='->', color='red'))
+    axs[0].annotate(f'x={BATHTUB_UPPER_BOUND}', xy=(BATHTUB_UPPER_BOUND, axs[0].get_ylim()[1]), xytext=(5, 5),
+                    textcoords='offset points', color='red', fontsize=14,
+                    arrowprops=dict(arrowstyle='->', color='red'))
+    axs[0].tick_params(axis='x', length=10, width=2, labelsize=14)
+    axs[0].tick_params(axis='y', length=10, width=2, labelsize=14)
+    axs[0].set_xlabel('Bins', fontsize=16)
+    axs[0].set_ylabel('Frequency', fontsize=16)
+    axs[0].set_title('Histogram with Bin Edges', fontsize=16)
     
-    if filter_flag:
-        count = np.sum((np.array(df_rel["hit_relative_time"]) >= HIT_LIFETIME_PERCENTAGE_BOUND[0]) \
-                       & (np.array(df_rel["hit_relative_time"]) < HIT_LIFETIME_PERCENTAGE_BOUND[1]))
-        hit_lifetime_bound_propotion = count / len(df_rel["hit_relative_time"])
-        if hit_lifetime_bound_propotion < HIT_LIFETIME_BOUND_PROPOTION_THRESHOLD:
-            return [True, hit_lifetime_bound_propotion]
+
+    # lifetime 
+    sns.lineplot(x=lifetime_bin_centers, y=global_data["total_lifetime_hist"], ax=axs[1], linewidth = 2)
+    axs[1].fill_between(lifetime_bin_centers, global_data["total_lifetime_hist"], 0, alpha=0.5)
+
+    axs[1].axvline(x=LIFE_TIME_THRESHOLD, color='red', linestyle='--', linewidth=1.5)
+    axs[1].annotate(f'x={LIFE_TIME_THRESHOLD}', xy=(LIFE_TIME_THRESHOLD, axs[1].get_ylim()[1]), xytext=(5, 5),
+                    textcoords='offset points', color='red', fontsize=14,
+                    arrowprops=dict(arrowstyle='->', color='red'))
+    axs[1].tick_params(axis='x', length=10, width=2, labelsize=14)
+    axs[1].tick_params(axis='y', length=10, width=2, labelsize=14)
+    axs[1].set_xlabel('Bins', fontsize=16)
+    axs[1].set_ylabel('Frequency', fontsize=16)
+    axs[1].set_title('Histogram with Bin Edges', fontsize=16)
+    
+    path = "./result_picture/score/"
+    if not Path(path).exists():
+        os.makedirs(path)
+    fig.savefig(path + "threshold")
+    plt.close(fig)
+
+    # log picture
+
+    fig, axs = plt.subplots(1, 2, figsize=(18, 9), gridspec_kw={'bottom': 0.3, 'top': 0.9}, dpi=300)
+    sns.lineplot(x=hit_bin_centers, y=global_data["total_hit_hist"], ax=axs[0], linewidth = 2)
+    axs[0].fill_between(hit_bin_centers, global_data["total_hit_hist"], 0, alpha=0.5)
+
+    axs[0].axvline(x=BATHTUB_LOWER_BOUND, color='red', linestyle='--', linewidth=1.5)
+    axs[0].axvline(x=BATHTUB_UPPER_BOUND, color='red', linestyle='--', linewidth=1.5)
+    axs[0].annotate(f'x={BATHTUB_LOWER_BOUND}', xy=(BATHTUB_LOWER_BOUND, axs[0].get_ylim()[1]), xytext=(5, 5),
+                    textcoords='offset points', color='red', fontsize=14,
+                    arrowprops=dict(arrowstyle='->', color='red'))
+    axs[0].annotate(f'x={BATHTUB_UPPER_BOUND}', xy=(BATHTUB_UPPER_BOUND, axs[0].get_ylim()[1]), xytext=(5, 5),
+                    textcoords='offset points', color='red', fontsize=14,
+                    arrowprops=dict(arrowstyle='->', color='red'))
+    axs[0].tick_params(axis='x', length=10, width=2, labelsize=14)
+    axs[0].tick_params(axis='y', length=10, width=2, labelsize=14)
+    axs[0].set_xlabel('Bins', fontsize=16)
+    axs[0].set_ylabel('Frequency', fontsize=16)
+    axs[0].set_title('Histogram with Bin Edges', fontsize=16)
+    axs[0].set_yscale('log', base=2)
+
+    # lifetime 
+    sns.lineplot(x=lifetime_bin_centers, y=global_data["total_lifetime_hist"], ax=axs[1], linewidth = 2)
+    axs[1].fill_between(lifetime_bin_centers, global_data["total_lifetime_hist"], 0, alpha=0.5)
+
+    axs[1].axvline(x=LIFE_TIME_THRESHOLD, color='red', linestyle='--', linewidth=1.5)
+    axs[1].annotate(f'x={LIFE_TIME_THRESHOLD}', xy=(LIFE_TIME_THRESHOLD, axs[1].get_ylim()[1]), xytext=(5, 5),
+                    textcoords='offset points', color='red', fontsize=14,
+                    arrowprops=dict(arrowstyle='->', color='red'))
+    axs[1].tick_params(axis='x', length=10, width=2, labelsize=14)
+    axs[1].tick_params(axis='y', length=10, width=2, labelsize=14)
+    axs[1].set_xlabel('Bins', fontsize=16)
+    axs[1].set_ylabel('Frequency', fontsize=16)
+    axs[1].set_title('Histogram with Bin Edges', fontsize=16)
+    axs[1].set_yscale('log', base=2)
+    path = "./result_picture/score/"
+    if not Path(path).exists():
+        os.makedirs(path)
+    fig.savefig(path + "threshold2")
+    plt.close(fig)
+
+def record_all_allocs(score_data, unsampled_allocs):
+    temp = {
+        "cold" : 0,        
+        "other" : 0,
+        "unsampled" : 0
+    }
+    count = temp.copy()
+    alloc_size = temp.copy()
+    lifetime_objsize_product = temp.copy()
+
+    for data in score_data.values():
+        if data["is_cold_flag"] == True:
+            count["cold"] += 1
+            alloc_size["cold"] += data["alloc_size"]
+            lifetime_objsize_product["cold"] += data["lifetime_objsize_product"]
         else:
-            return [False, hit_lifetime_bound_propotion]
-        
-        """ 
-        # can't work because of some objs are always hit
-        # that will cause the number of interval time totally small,
-        # but actually these are hot objs 
-        max_interval = max(interval_data["intervals"])
-        lower_bound = INTERVAL_TIME_BOUND[0] * max_interval
-        upper_bound = INTERVAL_TIME_BOUND[1] * max_interval
-        count = np.sum((np.array(interval_data["intervals"]) >= lower_bound) & (np.array(interval_data["intervals"]) < upper_bound))
-        interval_time_propotion = count / len(interval_data["intervals"])
-        if interval_time_propotion < INTERVAL_TIME_PROPOTION_THRESHOLD:
-            return [True, interval_time_propotion]
-        """
-    return [False, -1]
+            count["other"] += 1
+            alloc_size["other"] += data["alloc_size"]
+            lifetime_objsize_product["other"] += data["lifetime_objsize_product"]
+    
+    for data in unsampled_allocs.values():
+        count["unsampled"] += 1
+        alloc_size["unsampled"] += data["alloc_size"]
+        lifetime_objsize_product["unsampled"] += data["lifetime_objsize_product"]
+
+    all_data = {
+        "count" : count,
+        "alloc_size" : alloc_size,
+        "lifetime_objsize_product" : lifetime_objsize_product
+    }
+
+    raw_data = copy.deepcopy(all_data)
+
+    for dtype in all_data:
+        total_value = 0
+        for alloc_temper in all_data[dtype]:
+            total_value += all_data[dtype][alloc_temper]
+        for alloc_temper in all_data[dtype]:
+            all_data[dtype][alloc_temper] = round(all_data[dtype][alloc_temper] / total_value * 100, 3)
+    
+    df = pd.DataFrame.from_dict(all_data)
+    df = df.reset_index().rename(columns={'index': 'temperature'})
+    df_long = pd.melt(df, id_vars='temperature', value_vars=['count', 'alloc_size', 'lifetime_objsize_product'],
+                  var_name='method', value_name='propotion')
+
+    fig, axs = plt.subplots(1, 2, figsize=(15, 6), gridspec_kw={'bottom': 0.3, 'top': 0.9})
+    plt.subplots_adjust(wspace=0.3)
+    sns.barplot(x='method', y='propotion', hue='temperature', data=df_long, ax=axs[0])
+    for container in axs[0].containers:
+        labels = [f"{float(v.get_height()):.2f}%" for v in container]
+        axs[0].bar_label(container, labels=labels)
+
+    info = "count : " + str(raw_data["count"]) + "\n" \
+           "alloc_size : " + str(raw_data["alloc_size"]) + "\n" \
+           "lifetime_objsize_product : " + str(raw_data["lifetime_objsize_product"]) + "\n"
+               
+
+    fig.text(0.2, 0.2, info, ha='left', va='top', fontsize=10, color='blue')
+
+    path = "./result_picture/score/"
+    if not Path(path).exists():
+        os.makedirs(path)
+    fig.savefig(path + f"all_allocs_{args.cold_propotion}")
+    plt.close(fig)
+
+def record_judge_result(score_data, judge_score):
+    global endtime
+    score_distribution = []
+    for data in score_data.values():
+        score_distribution.append(data["score"][0])
+    
+    fig, axs = plt.subplots(1, 2, figsize=(15, 6), gridspec_kw={'bottom': 0.3, 'top': 0.9})
+    plt.subplots_adjust(wspace=0.3)
+    bin_edges = np.linspace(0, 100, 101)
+    sns.histplot(x=score_distribution, ax=axs[0], bins=bin_edges)
+    axs[0].axvline(x=judge_score[0], color='red', linestyle='--', linewidth=1.5)
+    axs[0].annotate(f'x={judge_score[0]}', xy=(judge_score[0], axs[0].get_ylim()[1]), xytext=(5, 5),
+                    textcoords='offset points', color='red', fontsize=14,
+                    arrowprops=dict(arrowstyle='->', color='red'))
+
+    path = "./result_picture/score/"
+    if not Path(path).exists():
+        os.makedirs(path)
+    fig.savefig(path + f"score_{args.cold_propotion}")
+    plt.close(fig)
+
+
+    cold_realtime_hist = []
+    for data in score_data.values():
+        if data["is_cold_flag"] == True:
+            cold_realtime_hist.append(data["data"]["realtime_hist"])
+
+    zipped_hist = zip(*cold_realtime_hist)
+    cold_realtime_hist = [sum(group) for group in zipped_hist]
+
+    realtime_bin_edges = np.linspace(0, endtime, 1001)
+    realtime_bin_centers = (realtime_bin_edges[:-1] + realtime_bin_edges[1:]) / 2
+    realtime_bin_centers = [round(num) for num in realtime_bin_centers]
+
+    fig, axs = plt.subplots(1, 2, figsize=(18, 9), gridspec_kw={'bottom': 0.3, 'top': 0.9}, dpi=300)
+    sns.histplot(x=realtime_bin_centers, weights=cold_realtime_hist, ax=axs[0], bins=100)
+    axs[0].set_yscale('log')
+    sns.histplot(x=realtime_bin_centers, weights=cold_realtime_hist, ax=axs[1], bins=100)
+    fig.savefig(path + f"interval_{args.cold_propotion}")
+    plt.close(fig)
 
 # use flag to move a image to a target dir 
 def classify_image(source_dir, name, target_dir, flag):
     if flag is False:
         return
-
+    if not Path(target_dir).exists():
+        os.makedirs(target_dir)
+    
     all_data = os.listdir(source_dir)
     for data in all_data:
         if name in data and data.endswith(".png"):
             shutil.copy(source_dir + '/' + data, target_dir)
 
-def update_allocs_info(allocs_info, allocs_temper, df_myaf_total_size):
-    for caller_addr in allocs_temper:
-        mask = df_myaf_total_size["caller_addr"] == caller_addr
-        if allocs_temper[caller_addr] != "sampled":
-            alloc_temper = allocs_temper[caller_addr]
-            allocs_info.classify[alloc_temper].count += 1
-            allocs_info.classify[alloc_temper].lifetime_objsize_product += df_myaf_total_size[mask]["lifetime_objsize_productsum"].iloc[0]
-            allocs_info.classify[alloc_temper].total_alloc_size += df_myaf_total_size[mask]["total_alloc_size"].iloc[0]
+# the policy of test if a malloc is cold or not 
+def calc_score(data, global_data):
+    return [data["bathtub_obj_num"] / data["caller_obj_num"] * 100, data["caller_obj_num"]]
+
+def prepare_score_data(df, endtime):
+    lifetime_mask = df["lifetime"] > LIFE_TIME_THRESHOLD
+    long_lifetime_obj_num = df[lifetime_mask]["data_addr"].nunique()
+    df_bathtub_obj = df[lifetime_mask][["data_addr", "hit_relative_time"]].copy()
+    #print(df_bathtub_obj)
+    df_bathtub_obj["is_bathtub_time"] = np.where((df_bathtub_obj["hit_relative_time"] > 5) & (df_bathtub_obj["hit_relative_time"] <= 95), True, False)
+    df_bathtub_obj =  df_bathtub_obj.groupby("data_addr", as_index=False).aggregate({"is_bathtub_time": ["any"]})
+    df_bathtub_obj.columns = df_bathtub_obj.columns.map(''.join)
+    df_bathtub_obj = df_bathtub_obj.rename(columns={"is_bathtub_timeany": "is_bathtub_obj"})
+    df_bathtub_obj["is_bathtub_obj"] = ~df_bathtub_obj["is_bathtub_obj"]
+    is_bathtub_mask = df_bathtub_obj["is_bathtub_obj"] == True
+    # convert the data into a histogram
+    bin_edges = np.linspace(0, 100, 1001)
+    bin_edges[0] -= 1000
+    bin_edges[-1] += 1000
+    hit_hist, bins = np.histogram(np.array(df[lifetime_mask]["hit_relative_time"]), bins=bin_edges)
+    bin_edges = np.linspace(0, endtime, 1001)
+    bin_edges[0] -= 10000
+    bin_edges[-1] += 10000
+    lifetime_hist, bins = np.histogram(np.array(df["lifetime"]), bins=bin_edges)
+    realtime_hist, bins = np.histogram(np.array(df["alloc_time"] + df["hit_absolute_time"]), bins=bin_edges)
+    return_data = {
+        "short_lifetime_obj_num" : int(df["caller_objects_num"].iloc[0] - long_lifetime_obj_num),
+        "long_lifetime_obj_num" : int(long_lifetime_obj_num),
+        "bathtub_obj_num" : len(df_bathtub_obj[is_bathtub_mask]),
+        "caller_obj_num" : int(df["caller_objects_num"].iloc[0]),
+        "hit_hist" : hit_hist.tolist(),
+        "lifetime_hist" : lifetime_hist.tolist(),
+        "realtime_hist" : realtime_hist.tolist()
+    }
+
+    return return_data
+
+def process_score_data(score_data):
+    global_data = {
+        "total_short_lifetime_obj_num" : 0,
+        "total_long_lifetime_obj_num" : 0,
+        "total_bathtub_obj_num" : 0,
+        "total_obj_num" : 0,
+        "total_hit_hist" : [],
+        "total_lifetime_hist" : [],
+        "total_realtime_hist" : []
+    }
+    
+    for data in score_data.values():
+        global_data["total_short_lifetime_obj_num"] += data["data"]["short_lifetime_obj_num"]
+        global_data["total_long_lifetime_obj_num"] += data["data"]["long_lifetime_obj_num"]
+        global_data["total_bathtub_obj_num"] += data["data"]["bathtub_obj_num"]
+        global_data["total_obj_num"] += data["data"]["caller_obj_num"]
+        global_data["total_hit_hist"].append(data["data"]["hit_hist"])
+        global_data["total_lifetime_hist"].append(data["data"]["lifetime_hist"])
+        global_data["total_realtime_hist"].append(data["data"]["realtime_hist"])
+    
+    zipped_hist = zip(*global_data["total_hit_hist"])
+    global_data["total_hit_hist"] = [sum(group) for group in zipped_hist]
+    zipped_hist = zip(*global_data["total_lifetime_hist"])
+    global_data["total_lifetime_hist"] = [sum(group) for group in zipped_hist]
+    zipped_hist = zip(*global_data["total_realtime_hist"])
+    global_data["total_realtime_hist"] = [sum(group) for group in zipped_hist]
+
+    return global_data
+
+def judge_malloc(score_data, process_score_data_func, record_score_global_data_func, calc_func):
+    path = "./result_picture/score/"
+    if not Path(path).exists():
+        os.makedirs(path)
+    with open(f"./result_picture/score/score_data.json", "w") as file:
+        score_data_str_keys = {str(k): v for k, v in score_data.items()}
+        json.dump(score_data_str_keys, file)
+    global_data = process_score_data_func(score_data)
+    record_score_global_data_func(global_data)
+    # print("global_data", global_data)
+    scores = []
+    for data in score_data.values():
+        data["score"] = calc_func(data["data"], global_data)
+        scores.append(data["score"])
+
+    scores.sort()
+    index = int(len(scores) * ((100 - args.cold_propotion) / 100.0))
+    judge_score = list(scores[index])
+
+    # retain cold_propotion of the amount.
+    # judge_score = list(np.percentile(scores, 100 - args.cold_propotion, axis=0,  method='lower'))
+    # print("judge", judge_score)
+    for data in score_data.values():
+        if data["score"] >= judge_score:
+            data["is_cold_flag"] = True
+            classify_image(data["source_path"], data["name"], data["target_path"], True)
+        else:
+            data["is_cold_flag"] = False
+            
+        with open(data["source_path"] + "/" + data["name"] + "_score.json", "w") as file:
+            json.dump({"score": data["score"]}, file)
+
+    return judge_score
 
 def event_moment_init():
     global event_moment
@@ -703,11 +890,28 @@ def event_moment_init():
 
 def main():
     global endtime, args
+    with open("./result/endtime", "r") as f:
+        endtime = float(f.readline())
+    
+    if args.already_have_score_data == True:
+        with open("./result_picture/score/score_data.json", "r") as file:
+            score_data = json.load(file)
+        with open("./result_picture/score/unsampled_allocs.json", "r") as file:
+            unsampled_allocs = json.load(file)
+        judge_score = judge_malloc(score_data, process_score_data, record_score_global_data, calc_score)
+        record_judge_result(score_data, judge_score)
+        record_all_allocs(score_data, unsampled_allocs)
+        return
 
     fileresult_names = {}
     fileresult_unsampled_names = {}
     fileresult_myaf = {}
     pids = {}
+    score_data = {}
+    unsampled_allocs = {}
+    if args.use_import_calc_method:
+        score_data2 = {}
+
     all_data = os.listdir("./result")
     #print(all_data)
     for data in all_data:
@@ -723,22 +927,30 @@ def main():
                 fileresult_names[pid] = []
                 for chunk in all_chunks:
                     fileresult_names[pid].append("./result/" + data + "/" + chunk)
-    with open("./result/endtime", "r") as f:
-        endtime = float(f.readline())
 
     # initialize event moment
     event_moment_init()
 
     # for every pid have files myaf
     for pid in pids:
+        # these dirs are used to sort result image
+        unsampled_dir_path = "./result_picture/" + str(pid) + "unsampled"
+        sampled_dir_path = "./result_picture/" + str(pid)
+        coldmalloc_dir_path = "./result_picture/" + str(pid) + "cold"
+        dir_paths = [unsampled_dir_path, sampled_dir_path, coldmalloc_dir_path]
+        if args.use_import_calc_method:
+            coldmalloc_dir_path2 = "./result_picture/" + str(pid) + "cold2"
+            dir_paths.append(coldmalloc_dir_path2)
+        for dir_path in dir_paths:
+            if not Path(dir_path).exists():
+                os.makedirs(dir_path)
+
         # open myaf for every alloc and free information            
         df_myaf = pd.read_csv(fileresult_myaf[pid], dtype=dtype)
         df_myaf = pd.DataFrame(df_myaf)        
         # I temporarily rename the column avoid to get it wrong
         df_myaf = df_myaf.rename(columns={"generation": "lifetime"})
 
-        allocs_info = Allocs_info(pid)
-        allocs_temper = {}
         df_myaf["lifetime_objsize_product"] = df_myaf["lifetime"].clip(lower=0) * df_myaf["size"]
         df_myaf_total_size =  df_myaf.groupby("caller_addr", as_index=False).aggregate({
             "lifetime_objsize_product": ["sum"],
@@ -748,16 +960,6 @@ def main():
         df_myaf_total_size = df_myaf_total_size.rename(columns={
             "sizesum": "total_alloc_size"
         })
-
-        # these dirs are used to sort result image
-        unsampled_dir_path = "./result_picture/" + str(pid) + "unsampled"
-        sampled_dir_path = "./result_picture/" + str(pid)
-        filter_dir_path = "./result_picture/" + str(pid) + "filter"
-        coldmalloc_dir_path = "./result_picture/" + str(pid) + "cold"
-        dir_paths = [unsampled_dir_path, sampled_dir_path, filter_dir_path, coldmalloc_dir_path]
-        for dir_path in dir_paths:
-            if not Path(dir_path).exists():
-                os.makedirs(dir_path)
 
         # In this pid, if all the objects alloced from some malloc have no any event(cachemiss)
         # then we output some picture with the information for these mallocs and these mallocs'obj  
@@ -776,7 +978,12 @@ def main():
                 print("no event", index, hex(caller_addr))
                 mask = df_myaf["caller_addr"] == caller_addr
                 record_objs_with_no_event(df_myaf[mask], unsampled_dir_path + "/" + str(index) + "_" + str(hex(caller_addr)))
-                allocs_temper[caller_addr] = "unsampled"
+                
+                mask = df_myaf_total_size["caller_addr"] == caller_addr
+                unsampled_allocs[(pid, caller_addr)] = {
+                    "alloc_size" : int(df_myaf_total_size[mask]["total_alloc_size"].iloc[0]),
+                    "lifetime_objsize_product" : float(df_myaf_total_size[mask]["lifetime_objsize_productsum"].iloc[0])
+                }
                 index += 1
         
         # In this pid, if one of the objects alloced from the malloc have a event(cachemiss)
@@ -821,12 +1028,14 @@ def main():
             })
 
             # record some information
-            allocs_info.classify["sampled"].count = len(indicate)
-            allocs_info.classify["sampled"].total_hits = len(df)
-            print(str(pid) + " sample num : ", allocs_info.classify["sampled"].count)
+            # allocs_info.classify["sampled"].count = len(indicate)
+            # allocs_info.classify["sampled"].total_hits = len(df)
+            # print(str(pid) + " sample num : ", allocs_info.classify["sampled"].count)
 
             # make pictures with every malloc address 
-            for i in range(allocs_info.classify["sampled"].count):
+            for i in range(len(indicate)):
+                if i > CONTINUE_NUM:
+                    continue
                 per_caller_info = indicate.iloc[i:i + 1, :]
                 print("\nmalloc " + str(i) + "\n", per_caller_info)
 
@@ -835,16 +1044,6 @@ def main():
                 mask2 = df["caller_addr_str"].isin(per_caller_info["caller_addr_str"])
                 mask3 = df_myaf["caller_addr"].isin([caller_addr])
                 mask4 = df_myaf[mask3]["lifetime"] >= LIFE_TIME_THRESHOLD
-                
-                # for filter 
-                # only consider the malloc whitch number of objs is more than SMALL_AMOUNT_OF_OBJS
-                condition1 = float(per_caller_info["count_of_objs"].to_string(index=False)) > SMALL_AMOUNT_OF_OBJS
-                # only consider the malloc whitch max lifetime of objs in this malloc is >= LIFE_TIME_THRESHOLD
-                condition2 = float(per_caller_info["lifetimemax"].to_string(index=False)) >= LIFE_TIME_THRESHOLD
-                # only consider the malloc whitch propotion of long lifetime objs bigger than LONG_LIFE_TIME_PROPOTION
-                long_lifetime_propotion = len(df_myaf[mask3 & mask4]) / float(per_caller_info["count_of_objs"].to_string(index=False))
-                condition3 = long_lifetime_propotion > LONG_LIFE_TIME_PROPOTION
-                filter_flag = condition1 and condition2 and condition3
 
                 # get savepath
                 picture_name = re.sub(r'\s+', '_', per_caller_info["caller_addr_str"].to_string())
@@ -852,7 +1051,7 @@ def main():
 
                 # get interval data or processing data
                 interval_data = {}
-                if args.just_filter_malloc:
+                if args.already_have_interval_data:
                     all_data = os.listdir(sampled_dir_path)
                     for data in all_data:
                         if "interval_data" in data and picture_name in data and data.endswith(".json"):
@@ -863,43 +1062,79 @@ def main():
                         if (float(per_caller_info["lifetimemax"].to_string(index=False)) < LIFE_TIME_THRESHOLD) or \
                             (float(per_caller_info["count_of_objs"].to_string(index=False)) < OBJ_SIMILARITY_SELECTNUM):
                             continue
-                    statistics(df[mask2], df_myaf[mask3], filter_flag, savepath, interval_data)
-
-                # test if the malloc is cold with our policy
-                is_cold, cold_score = is_cold_malloc(df[mask & mask2], filter_flag)
-                if is_cold:
-                    allocs_temper[caller_addr] = "cold"
-                else:
-                    allocs_temper[caller_addr] = "other"
-
+                    statistics(df[mask2], df_myaf[mask3], filter_flag = False, savepath=savepath, interval_data=interval_data)
+                
                 record_malloc(df[mask2], df_myaf[mask3], df[mask & mask2], per_caller_info, 
-                              long_lifetime_propotion, is_cold, cold_score, savepath)
+                                long_lifetime_propotion=0, is_cold=None, cold_score=0, savepath=savepath)
+                
+                mask = df_myaf_total_size["caller_addr"] == caller_addr
 
-                classify_image(sampled_dir_path, picture_name, filter_dir_path, filter_flag)
-                classify_image(sampled_dir_path, picture_name, coldmalloc_dir_path, is_cold)
+                score_data[(pid, caller_addr)] = { 
+                    "data" : prepare_score_data(df[mask2], endtime),
+                    "source_path" : sampled_dir_path,
+                    "name" : picture_name,
+                    "target_path" : coldmalloc_dir_path,
+                    "score" : 0,
+                    "is_cold_flag" : False,
+                    "alloc_size" : int(df_myaf_total_size[mask]["total_alloc_size"].iloc[0]),
+                    "lifetime_objsize_product" : float(df_myaf_total_size[mask]["lifetime_objsize_productsum"].iloc[0])
+                }
+                if args.use_import_calc_method:
+                    score_data2[(pid, caller_addr)] = {
+                        "data" : prepare_score_data2(df[mask2], endtime),
+                        "source_path" : sampled_dir_path,
+                        "name" : picture_name,
+                        "target_path" : coldmalloc_dir_path2,
+                        "score" : 0,
+                        "is_cold_flag" : False,
+                        "alloc_size" : int(df_myaf_total_size[mask]["total_alloc_size"].iloc[0]),
+                        "lifetime_objsize_product" : float(df_myaf_total_size[mask]["lifetime_objsize_productsum"].iloc[0])
+                    }
+                
+        # # remove the empty dir
+        # for dir_path in dir_paths:
+        #     try:
+        #         os.rmdir(dir_path)
+        #     except:
+        #         None
 
-                # calculate DTW
-                #DTW(df[mask2], dir_path + "/" + picture_name, per_caller_info) 
+    judge_score = judge_malloc(score_data, process_score_data, record_score_global_data, calc_score)
+    record_judge_result(score_data, judge_score)
+    if args.use_import_calc_method:
+        judge_score = judge_malloc(score_data2, process_score_data2, record_score_global_data2, calc_score2)
+        record_judge_result(score_data, judge_score)
 
-        update_allocs_info(allocs_info, allocs_temper, df_myaf_total_size)
-        record_mallocs(allocs_info, coldmalloc_dir_path + "/all_allocs")
-
-        # remove the empty dir
-        for dir_path in dir_paths:
-            try:
-                os.rmdir(dir_path)
-            except:
-                None
-
+    record_all_allocs(score_data, unsampled_allocs)
+    with open( "./result_picture/score/unsampled_allocs.json", 'w') as file:
+        unsampled_allocs_str_keys = {str(k): v for k, v in unsampled_allocs.items()}
+        json.dump(unsampled_allocs_str_keys, file)
+    
 
 if __name__ == "__main__":
     # Turn off the automatic using scientific notation at axis lable
     plt.rcParams['axes.formatter.useoffset'] = False
 
-    parser = argparse.ArgumentParser(usage="python3 ./data_show --just_filter_malloc [False] --debug [False] --just_show_obj_similarity [False]")
-    parser.add_argument('--just_filter_malloc', type=bool, default=False, help="[True / False]")
+    parser = argparse.ArgumentParser(
+        usage="python3 ./data_show\n\
+               --already_have_interval_data [False]\n\
+               --already_have_score_data [False]\n\
+               --cold_propotion [10]\n\
+               --debug [False]\n\
+               --just_show_obj_similarity [False]\n\
+               --use_import_calc_method [False]\n"
+    )
+    parser.add_argument('--already_have_interval_data', type=bool, default=False, help="[True / False]")
+    parser.add_argument('--already_have_score_data', type=bool, default=False, help="[True / False]")
+    parser.add_argument('--cold_propotion', type=int, default=10, help="[0 ~ 100]")
     parser.add_argument('--debug', type=bool, default=False, help="[True / False]")
     parser.add_argument('--just_show_obj_similarity', type=bool, default=False, help="[True / False]")
+    parser.add_argument('--use_import_calc_method', type=bool, default=False, help="[True / False]")
     args = parser.parse_args()
     
+    if args.use_import_calc_method:
+        from calc_score import calc_score as calc_score2
+        from calc_score import prepare_score_data as prepare_score_data2
+        from calc_score import process_score_data as process_score_data2
+        from calc_score import record_score_global_data as record_score_global_data2
+
     main()
