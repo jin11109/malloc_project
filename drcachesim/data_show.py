@@ -181,11 +181,13 @@ def record_objs(obj_sizes, statistics_hits, statistics_lifetime, no_event_objs, 
     axs[0].set_ylabel('number of objects')
     axs[0].set_xlabel('number of hits(cachemisses)')
     axs[0].set_yscale('log')
+    axs[0].set_ylim(1, None)
     sns.histplot(x=obj_sizes, ax=axs[1], bins=100)
     axs[1].set_title('Measuring object sizes')
     axs[1].set_ylabel('number of objects')
     axs[1].set_xlabel('sizes')
     axs[1].set_yscale('log')
+    axs[1].set_ylim(1, None)
     
     obj_info = "malloc objects information" \
                 + "\n" + "|  Number of tatal objects : " + str(number_of_total_objs) \
@@ -211,11 +213,13 @@ def record_objs(obj_sizes, statistics_hits, statistics_lifetime, no_event_objs, 
     axs[0].set_ylabel('number of objects')
     axs[0].set_xlabel('value of lifetime(seconds)')
     axs[0].set_yscale('log')
+    axs[0].set_ylim(1, None)
     sns.histplot(x=no_event_obj_sizes, ax=axs[1], bins=100)
     axs[1].set_title('Measuring object sizes')
     axs[1].set_ylabel('number of objects')
     axs[1].set_xlabel('sizes')
     axs[1].set_yscale('log')
+    axs[1].set_ylim(1, None)
     
     number_of_total_no_event_objs = len(no_event_objs)
     number_of_no_event_objs_shortlifetime = len(no_event_objs[no_event_objs["lifetime"] < LIFE_TIME_THRESHOLD])
@@ -241,11 +245,13 @@ def record_obj(obj_life_time, obj_size, obj_interval, obj_performance, obj_alloc
     axs[0].set_ylabel('count')
     axs[0].set_xlabel('time (second) : actually hit time - alloc time')
     axs[0].set_yscale('log')
+    axs[0].set_ylim(1, None)
     sns.histplot(x=obj_interval, ax=axs[1], bins=100)
     axs[1].set_title('Count Ineterval Hit Time for Malloc object')
     axs[1].set_ylabel('count')
     axs[1].set_xlabel('interval time (second) : ith hit time - (i - 1)th hit time')
     axs[1].set_yscale('log')
+    axs[1].set_ylim(1, None)
     
     obj_info = "malloc object information" \
                 + "\n" + "|  obj addr : " + obj_addr \
@@ -271,11 +277,13 @@ def record_internal(intervals, intervals_128kfilter, obj_sizes, obj_sizes_128kfi
     axs[0].set_ylabel('count')
     axs[0].set_xlabel('interval time (second)')
     axs[0].set_yscale('log')
+    axs[0].set_ylim(1, None)
     sns.histplot(x=intervals_128kfilter, ax=axs[1], bins=100)
     axs[1].set_title('Count Sampling Hits Ineterval time with 128k filter')
     axs[1].set_ylabel('count')
     axs[1].set_xlabel('interval time (second)')
     axs[1].set_yscale('log')
+    axs[1].set_ylim(1, None)
     
     avgsize = sum(obj_sizes) / len(obj_sizes)
     if len(obj_sizes_128kfilter) == 0:
@@ -315,6 +323,7 @@ def record_malloc_with_realtime(df, savepath):
     hist, bins = np.histogram(df["hit_time"], bins=bin_edges)
     # real time
     sns.histplot(x=x_axis, weights=hist, ax=axs[0], bins=100)
+    axs[0].set_ylim(0, None)
     axs[0].set_title('Sampling Hits Count for Malloc Objects in Real time')
     axs[0].set_xlabel('Real Timing of Sampling Hits Across lifetimes (seconds)')
     axs[0].set_ylabel('Number of Sampling Hits')
@@ -337,6 +346,7 @@ def record_malloc(df_abs, df_lifetime, df_rel, per_caller_info, long_lifetime_pr
     axs[0].set_ylabel('Number of Sampling Hits')
     axs[0].tick_params(axis='x', rotation=15)
     axs[0].set_yscale('log')
+    axs[0].set_ylim(1, None)
     
     # relatine time
     rel_bins = np.linspace(-3, 103, 101)
@@ -345,6 +355,7 @@ def record_malloc(df_abs, df_lifetime, df_rel, per_caller_info, long_lifetime_pr
     axs[1].set_xlabel('Timing of Sampling Hits Across lifetimes (%)')
     axs[1].set_ylabel('Number of Sampling Hits')
     axs[1].set_yscale('log')
+    axs[1].set_ylim(1, None)
     #axs[1].set_xlim(-3, 103)
 
     # life time
@@ -354,6 +365,7 @@ def record_malloc(df_abs, df_lifetime, df_rel, per_caller_info, long_lifetime_pr
     axs[2].set_ylabel('Number of Malloc Objects')
     axs[2].tick_params(axis='x', rotation=15)
     axs[2].set_yscale('log')
+    axs[2].set_ylim(1, None)
     
     # add some information to picture
     alloc_type = alloc_type_mapping[df_lifetime["alloc_type"].iloc[0]]
@@ -399,11 +411,13 @@ def record_objs_with_no_event(df_myaf, savepath):
     axs[0].set_ylabel('number of objects')
     axs[0].set_xlabel('number of lifetime')
     axs[0].set_yscale('log')
+    axs[0].set_ylim(1, None)
     sns.histplot(x=df_myaf["size"], ax=axs[1], bins=100)
     axs[1].set_title('Measuring object sizes')
     axs[1].set_ylabel('number of objects')
     axs[1].set_xlabel('sizes')
     axs[1].set_yscale('log')
+    axs[0].set_ylim(1, None)
     
     obj_info = "malloc objects information" \
                 + "\n" + "|  Size of tatal objects : " + str(df_myaf["size"].sum()) \
@@ -687,9 +701,9 @@ def record_all_allocs(score_data, unsampled_allocs):
         lifetime_objsize_product["unsampled"] += data["lifetime_objsize_product"]
 
     all_data = {
-        "count" : count,
+        "caller_count" : count,
         "alloc_size" : alloc_size,
-        "lifetime_objsize_product" : lifetime_objsize_product
+        "memory_occupation" : lifetime_objsize_product
     }
 
     raw_data = copy.deepcopy(all_data)
@@ -702,20 +716,22 @@ def record_all_allocs(score_data, unsampled_allocs):
             all_data[dtype][alloc_temper] = round(all_data[dtype][alloc_temper] / total_value * 100, 3)
     
     df = pd.DataFrame.from_dict(all_data)
-    df = df.reset_index().rename(columns={'index': 'temperature'})
-    df_long = pd.melt(df, id_vars='temperature', value_vars=['count', 'alloc_size', 'lifetime_objsize_product'],
+    df = df.reset_index().rename(columns={'index': 'category'})
+    df_long = pd.melt(df, id_vars='category', value_vars=['caller_count', 'alloc_size', 'memory_occupation'],
                   var_name='method', value_name='propotion')
 
-    fig, axs = plt.subplots(1, 2, figsize=(15, 6), gridspec_kw={'bottom': 0.3, 'top': 0.9})
+    fig, axs = plt.subplots(1, 2, figsize=(10, 4), gridspec_kw={'bottom': 0.3, 'top': 0.9})
     plt.subplots_adjust(wspace=0.3)
-    sns.barplot(x='method', y='propotion', hue='temperature', data=df_long, ax=axs[0])
+    df_long = df_long[(df_long["category"] != "unsampled") & (df_long["method"] != "alloc_size")]
+    sns.barplot(x='method', y='propotion', hue='category', data=df_long, ax=axs[0])
+    axs[0].set_ylim(0, 100)
     for container in axs[0].containers:
         labels = [f"{float(v.get_height()):.2f}%" for v in container]
         axs[0].bar_label(container, labels=labels)
 
-    info = "count : " + str(raw_data["count"]) + "\n" \
+    info = "caller_count : " + str(raw_data["caller_count"]) + "\n" \
            "alloc_size : " + str(raw_data["alloc_size"]) + "\n" \
-           "lifetime_objsize_product : " + str(raw_data["lifetime_objsize_product"]) + "\n"
+           "memory_occupation : " + str(raw_data["memory_occupation"]) + "\n"
                
 
     fig.text(0.2, 0.2, info, ha='left', va='top', fontsize=10, color='blue')
@@ -763,7 +779,9 @@ def record_judge_result(score_data, judge_score):
     fig, axs = plt.subplots(1, 2, figsize=(18, 9), gridspec_kw={'bottom': 0.3, 'top': 0.9}, dpi=300)
     sns.histplot(x=realtime_bin_centers, weights=cold_realtime_hist, ax=axs[0], bins=100)
     axs[0].set_yscale('log')
+    axs[0].set_ylim(1, None)
     sns.histplot(x=realtime_bin_centers, weights=cold_realtime_hist, ax=axs[1], bins=100)
+    axs[1].set_ylim(0, None)
     fig.savefig(path + f"interval_{args.cold_propotion}")
     plt.close(fig)
 
