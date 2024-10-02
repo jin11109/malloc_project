@@ -96,6 +96,7 @@ def calculate_reuse_distances(input_path):
         for pid, temperature, page in df_chunk.itertuples(index=False):
             if last_seen == (pid, page):
                 reuse_distance[temperature].append(0)
+                # 要全部加一
                 count += 1
                 continue
             else:
@@ -123,6 +124,7 @@ def calculate_reuse_distances(input_path):
     return reuse_distance
 
 def output(reuse_dist, savepath):
+    df = pd.DataFrame(reuse_dist)
     fig, axs = plt.subplots(1, 1, figsize=(14, 10), gridspec_kw={"bottom": 0.3, "top": 0.9})
     sns.histplot(x=reuse_dist, ax=axs, bins=200)
     axs.set_title("Page Reuse Distance Frequency Chart")
@@ -165,13 +167,13 @@ def main():
         del reuse_distance
         gc.collect()
 
-    # already have reuse distance data 
+    # already have reuse distance data
+    reuse_distance = {}
     with open("./result/cold_reuse_distance_space.json", 'r') as file:
-        reuse_distance = json.load(file)
-        output(reuse_distance, "cold_reusedist_space")
+        reuse_distance["cold_reuse_dist"] = json.load(file)
     with open("./result/other_reuse_distance_space.json", 'r') as file:
-        reuse_distance = json.load(file)
-        output(reuse_distance, "other_reuse_distance_space")
+        reuse_distance["other_reuse_dist"] = json.load(file)
+    output(reuse_distance, "reusedist_space")
     # with open("./result/not_condider_reuse_distance_space.json", 'r') as file:
     #     reuse_distance = json.load(file)
     #     output(reuse_distance, "not_condider_reuse_distance_space")

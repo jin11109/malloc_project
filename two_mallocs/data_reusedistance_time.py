@@ -151,8 +151,12 @@ def calculate_reuse_distances(key_dir):
     return reuse_distance
 
 def output(reuse_dist, savepath):
-    fig, axs = plt.subplots(1, 1, figsize=(14, 10), gridspec_kw={"bottom": 0.3, "top": 0.9})
-    sns.histplot(x=reuse_dist, ax=axs, bins=200)
+    df_cold = pd.DataFrame({'reuse_dist': reuse_dist['cold_reuse_dist'], 'category': 'cold_reuse_dist'})
+    df_other = pd.DataFrame({'reuse_dist': reuse_dist['other_reuse_dist'], 'category': 'other_reuse_dist'})
+    df = pd.concat([df_cold, df_other])
+
+    fig, axs = plt.subplots(1, 1, figsize=(7, 5), gridspec_kw={"bottom": 0.3, "top": 0.9})
+    sns.histplot(data=df, x='reuse_dist', ax=axs, bins=150, hue='category')
     axs.set_title("Page Reuse Distance Frequency Chart")
     axs.set_ylabel("Reference Count")
     axs.set_xlabel("Reuse Distance")
@@ -164,9 +168,9 @@ def output(reuse_dist, savepath):
     fig.text(0.2, 0.2,  obj_info, ha="left", va="top", fontsize=10, color="blue")
     
     # close Scientific Notation
-    ax = plt.gca()
-    ax.xaxis.set_major_formatter(ScalarFormatter(useOffset=False))
-    ax.xaxis.get_major_formatter().set_scientific(False)
+    # ax = plt.gca()
+    # ax.xaxis.set_major_formatter(ScalarFormatter(useOffset=False))
+    # ax.xaxis.get_major_formatter().set_scientific(False)
 
     fig.savefig("./result_picture/" + savepath)
     plt.close(fig)
@@ -195,13 +199,13 @@ def main():
         del reuse_distance
         gc.collect()
 
-    # already have reuse distance data 
+    # already have reuse distance data
+    reuse_dist = {}
     with open("./result/cold_reuse_distance_time.json", 'r') as file:
-        reuse_distance = json.load(file)
-        output(reuse_distance, "cold_reusedist_time")
+        reuse_dist["cold_reuse_dist"] = json.load(file)
     with open("./result/other_reuse_distance_time.json", 'r') as file:
-        reuse_distance = json.load(file)
-        output(reuse_distance, "other_reuse_distance_time")
+        reuse_dist["other_reuse_dist"] = json.load(file)
+    output(reuse_dist, "reuse_distance_time")
     # with open("./result/not_condider_reuse_distance_time.json", 'r') as file:
     #     reuse_distance = json.load(file)
     #     output(reuse_distance, "not_condider_reuse_distance_time")
