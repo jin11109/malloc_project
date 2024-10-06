@@ -26,8 +26,7 @@
 
 // lock
 pthread_mutex_t malloc_mutex;
-pthread_mutex_t trace_mutex;
-__thread bool have_trace_lock = 0;
+__thread bool is_in_backtrace_func = false;
 
 typedef struct pool {
         // memory pool size
@@ -168,7 +167,7 @@ void* pool_realloc(size_t new_size, void* ori_addr) {
  * ==========================================================================*/
 
 void* malloc(size_t size) {
-    if (!have_trace_lock) pthread_mutex_lock(&malloc_mutex);
+    if (!is_in_backtrace_func) pthread_mutex_lock(&malloc_mutex);
 
 #ifdef DEBUG
     fprintf(stderr, "malloc %lu\n", size);
@@ -184,9 +183,8 @@ void* malloc(size_t size) {
     size = align(size, _Alignof(max_align_t));
     void* addr = pool_alloc(size);
 
-    if (!have_trace_lock) {
-        pthread_mutex_lock(&trace_mutex);
-        have_trace_lock = true;
+    if (!is_in_backtrace_func) {
+        is_in_backtrace_func = true;
 
         void* return_addrs[MAX_DEPTH_OF_CALL_CHAIN];
         int depth = backtrace(return_addrs, MAX_DEPTH_OF_CALL_CHAIN);
@@ -201,8 +199,7 @@ void* malloc(size_t size) {
         }
         print_info_alloc(getpid(), ori_size, addr, return_addrs, 'm');
 
-        have_trace_lock = false;
-        pthread_mutex_unlock(&trace_mutex);
+        is_in_backtrace_func = false;
     }
 
     pthread_mutex_unlock(&malloc_mutex);
@@ -210,7 +207,7 @@ void* malloc(size_t size) {
 }
 
 void free(void* addr) {
-    if (have_trace_lock) return;
+    if (is_in_backtrace_func) return;
 
     pthread_mutex_lock(&malloc_mutex);
 
@@ -225,7 +222,7 @@ void free(void* addr) {
 }
 
 void* realloc(void* ori_addr, size_t new_size) {
-    if (!have_trace_lock) pthread_mutex_lock(&malloc_mutex);
+    if (!is_in_backtrace_func) pthread_mutex_lock(&malloc_mutex);
 
 #ifdef DEBUG
     fprintf(stderr, "realloc %p %lu\n", ori_addr, new_size);
@@ -244,9 +241,8 @@ void* realloc(void* ori_addr, size_t new_size) {
     } else if (ori_addr == NULL) { // like malloc
         void* new_addr = pool_alloc(new_size);
 
-        if (!have_trace_lock) {
-            pthread_mutex_lock(&trace_mutex);
-            have_trace_lock = true;
+        if (!is_in_backtrace_func) {
+            is_in_backtrace_func = true;
 
             void* return_addrs[MAX_DEPTH_OF_CALL_CHAIN];
             int depth;
@@ -258,17 +254,15 @@ void* realloc(void* ori_addr, size_t new_size) {
             print_info_alloc(getpid(), ori_new_size, new_addr, return_addrs,
                              'm');
 
-            have_trace_lock = false;
-            pthread_mutex_unlock(&trace_mutex);
+            is_in_backtrace_func = false;
         }
         pthread_mutex_unlock(&malloc_mutex);
         return new_addr;
 
     } else { // realloc
         void* new_addr = pool_realloc(new_size, ori_addr);
-        if (!have_trace_lock) {
-            pthread_mutex_lock(&trace_mutex);
-            have_trace_lock = true;
+        if (!is_in_backtrace_func) {
+            is_in_backtrace_func = true;
 
             void* return_addrs[MAX_DEPTH_OF_CALL_CHAIN];
             int depth;
@@ -281,8 +275,7 @@ void* realloc(void* ori_addr, size_t new_size) {
                              'r');
             print_info_free(getpid(), ori_addr, 'r');
 
-            have_trace_lock = false;
-            pthread_mutex_unlock(&trace_mutex);
+            is_in_backtrace_func = false;
         }
         pthread_mutex_unlock(&malloc_mutex);
         return new_addr;
@@ -290,7 +283,7 @@ void* realloc(void* ori_addr, size_t new_size) {
 }
 
 void* calloc(size_t count, size_t size) {
-    if (!have_trace_lock) pthread_mutex_lock(&malloc_mutex);
+    if (!is_in_backtrace_func) pthread_mutex_lock(&malloc_mutex);
 
 #ifdef DEBUG
     fprintf(stderr, "calloc %lu %lu\n", count, size);
@@ -313,9 +306,8 @@ void* calloc(size_t count, size_t size) {
      */
     memset(addr, 0, new_size);
 
-    if (!have_trace_lock) {
-        pthread_mutex_lock(&trace_mutex);
-        have_trace_lock = true;
+    if (!is_in_backtrace_func) {
+        is_in_backtrace_func = true;
 
         void* return_addrs[MAX_DEPTH_OF_CALL_CHAIN];
         int depth;
@@ -325,8 +317,7 @@ void* calloc(size_t count, size_t size) {
         }
         print_info_alloc(getpid(), ori_size, addr, return_addrs, 'c');
 
-        have_trace_lock = false;
-        pthread_mutex_unlock(&trace_mutex);
+        is_in_backtrace_func = false;
     }
 
     pthread_mutex_unlock(&malloc_mutex);
