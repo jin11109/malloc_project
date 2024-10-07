@@ -17,8 +17,6 @@ import swifter
 # ptmalloc2 DEFAULT_MMAP_THRESHOLD
 MMAP_THRESHOLD = 128 * 1024
 
-end_time = 0
-start_time = 0
 datatype_mya = {
     "alloc_type" : str,
     "size" : int,
@@ -44,6 +42,9 @@ def transform_time_to_readable(df, time_column):
     if args.profiling_mode == "online":
         None
     elif args.profiling_mode == "offline":
+        with open("./data/starttime", "r") as f:
+            start_time = f.readline()
+            start_time = int(start_time.strip())
         df[time_column] = df[time_column] - start_time
 
 def merge_alloc_free_info_to_obj_info(pid):
@@ -95,15 +96,7 @@ def miss_addr_to_data_addr(miss_addr, pid, data_addrs):
         return 0
 
 def main():
-    global end_time, start_time
     pids = []
-
-    with open("./data/endtime", "r") as f:
-        end_time = f.readline()
-        end_time = float(end_time.strip())
-    with open("./data/starttime", "r") as f:
-        start_time = f.readline()
-        start_time = float(start_time.strip())
     
     # get all pid num
     all_data = os.listdir("./data")
