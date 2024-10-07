@@ -72,17 +72,16 @@ else
     exit 0
 fi
 
-gzip -d ./data/cachemisses.csv.gz 
-# python3 ./data_split.py
+gzip -d ./data/cachemisses.csv.gz
+sed -i '1i miss_addr,pid,miss_time' ./data/cachemisses.csv
 
-# # merge the data from pin tool and LD_PRELOAD function
-# python3 ./data_merge.py
-# cp ./data/myaf* ./result/
-# cp ./data/endtime ./result/
-# cp ./data/adjustment_time ./result/
+# merge the data from LD_PRELOAD and drcachesim 
+python3 ./data_merge.py --profiling_mode $1
+cp ./data/endtime ./result/
+cp ./data/starttime ./result/
 
-# # show the result
+# show the result
 # python3 ./data_show.py
 
-# rm ./fifo_preload
-# echo 1 | sudo tee /proc/sys/kernel/randomize_va_space > /dev/null
+rm ./fifo_preload
+echo 1 | sudo tee /proc/sys/kernel/randomize_va_space > /dev/null

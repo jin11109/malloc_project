@@ -53,9 +53,9 @@ def capture_data():
             if files.get(filename) is None:
                 files[filename] = filepath
                 if info[0] == "mya":
-                    write_data(["type", "size", "data_addr", "alloc_time", "callchain0", "callchain1", "callchain2", "callchain3"], filename)
+                    write_data(["alloc_type", "size", "data_addr", "alloc_time", "callchain0", "callchain1", "callchain2", "callchain3"], filename)
                 elif info[0] == "myf":
-                    write_data(["type", "data_addr", "free_time"], filename)
+                    write_data(["free_type", "data_addr", "free_time"], filename)
 
             if info[0] == "mya":
                 type_ = info[1]
