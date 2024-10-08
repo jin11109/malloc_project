@@ -49,7 +49,7 @@ echo -e "start experiment"
 echo -e "=============================================================\n\n" 
 
 if [ "$1" = "online" ]; then
-    python3 ./data_record.py &
+    python3 ./data_record.py --profiling_mode online &
     ../../mydynamorio/dynamorio/build/bin64/drrun -t drcachesim -LL_miss_file ./data/cachemisses.csv.gz -- ./launcher $target_program
     # wait for ./data_record.py
     wait
@@ -61,7 +61,7 @@ elif [ "$1" = "offline" ]; then
         rm -r ./dr_raw_data
         mkdir ./dr_raw_data
     fi
-    python3 ./data_record.py &
+    python3 ./data_record.py --profiling_mode offline &
     ../../mydynamorio/dynamorio/build/bin64/drrun -t drcachesim -offline -outdir ./dr_raw_data -- ./launcher  $target_program
     # wait for ./data_record.py
     wait

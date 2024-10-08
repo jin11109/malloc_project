@@ -1,5 +1,8 @@
 import csv
 import os
+import argparse
+import mmap
+import struct
 
 # Files to record preload function output
 files = {}
@@ -21,9 +24,14 @@ def write_data(data, filename):
     file_writers[filename].writerow(data)
 
 # this function capture data from fifo (mymalloc.so output)
-def capture_data():
+def main():
     global files_to_close, files
-    os.system("./record_time ./data/starttime")
+    if args.profiling_mode == "offline":
+        os.system("./record_time ./data/starttime")
+    elif args.profiling_mode == "online":
+        with open("./data/starttime", "w") as starttime_f:
+            starttime_f.write(str(0))
+                
     print("data_record.py : read fifo_preload for the mymalloc.so output")
     with open("./fifo_preload", "r") as fifo:
 
@@ -31,7 +39,17 @@ def capture_data():
             data = fifo.readline()
             if len(data) == 0:
                 print("data_record.py : fifo_preload close with get zero\n")
-                os.system("./record_time ./data/endtime")
+                # record endtime
+                if args.profiling_mode == "offline":
+                    os.system("./record_time ./data/starttime")
+                elif args.profiling_mode == "online":
+                    with open("./data/endtime", "w") as endtime_f:
+                        with open("timmer", "r+b") as f:
+                            time_data = mmap.mmap(f.fileno(), 8, access=mmap.ACCESS_READ)
+                            time_data = time_data.read(8)
+                            time_data = struct.unpack('q', time_data)
+                            endtime_f.write(str(time_data[0]))
+
                 for f in files_to_close:
                     f.close()
                 break
@@ -75,7 +93,14 @@ def capture_data():
                 write_data([type_, data_addr, free_time], filename)
 
 if __name__ == "__main__":
-    capture_data()
+    parser = argparse.ArgumentParser(
+        usage="python3 ./data_merge\n\
+               --profiling_mode [online]\n"
+    )
+    parser.add_argument('--profiling_mode', type=str, default="online", 
+                        help="[online / offline]")
+    args = parser.parse_args()
+    main()
 
     
     
