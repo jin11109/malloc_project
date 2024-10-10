@@ -3,6 +3,10 @@ import os
 import argparse
 import mmap
 import struct
+import time
+
+# Difference between 1970 and 1601 in seconds
+UNIX_TO_WINDOWS_EPOCH_DIFF_SECONDS = 11644473600
 
 # Files to record preload function output
 files = {}
@@ -23,33 +27,35 @@ def write_data(data, filename):
 
     file_writers[filename].writerow(data)
 
+def dump_time(path):
+    with open(path, "w") as time_f:
+        if args.profiling_mode == "offline":
+            time_data = time.time_ns() // 1000
+            time_data += UNIX_TO_WINDOWS_EPOCH_DIFF_SECONDS * 1000000
+            time_f.write(str(time_data))
+        elif args.profiling_mode == "online":
+            if path == "./data/starttime":
+                time_f.write(str(0))
+                return
+            with open("timmer", "r+b") as f:
+                time_data = mmap.mmap(f.fileno(), 8, access=mmap.ACCESS_READ)
+                time_data = time_data.read(8)
+                time_data = struct.unpack('q', time_data)
+                time_f.write(str(time_data[0]))
+
 # this function capture data from fifo (mymalloc.so output)
 def main():
     global files_to_close, files
-    if args.profiling_mode == "offline":
-        os.system("./record_time ./data/starttime")
-    elif args.profiling_mode == "online":
-        with open("./data/starttime", "w") as starttime_f:
-            starttime_f.write(str(0))
                 
     print("data_record.py : read fifo_preload for the mymalloc.so output")
     with open("./fifo_preload", "r") as fifo:
+        dump_time("./data/starttime")
 
         while True:
             data = fifo.readline()
             if len(data) == 0:
                 print("data_record.py : fifo_preload close with get zero\n")
-                # record endtime
-                if args.profiling_mode == "offline":
-                    os.system("./record_time ./data/starttime")
-                elif args.profiling_mode == "online":
-                    with open("./data/endtime", "w") as endtime_f:
-                        with open("timmer", "r+b") as f:
-                            time_data = mmap.mmap(f.fileno(), 8, access=mmap.ACCESS_READ)
-                            time_data = time_data.read(8)
-                            time_data = struct.unpack('q', time_data)
-                            endtime_f.write(str(time_data[0]))
-
+                dump_time("./data/endtime")
                 for f in files_to_close:
                     f.close()
                 break

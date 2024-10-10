@@ -16,6 +16,8 @@ import swifter
 
 # ptmalloc2 DEFAULT_MMAP_THRESHOLD
 MMAP_THRESHOLD = 128 * 1024
+# Difference between 1970 and 1601 in seconds
+UNIX_TO_WINDOWS_EPOCH_DIFF_SECONDS = 11644473600
 
 datatype_mya = {
     "alloc_type" : str,
@@ -38,14 +40,12 @@ datatype_miss = {
     "miss_time" : int
 }
 
-def transform_time_to_readable(df, time_column):
+def transform_time_as_dr_use(alloc_df, free_df):
     if args.profiling_mode == "online":
         None
     elif args.profiling_mode == "offline":
-        with open("./data/starttime", "r") as f:
-            start_time = f.readline()
-            start_time = int(start_time.strip())
-        df[time_column] = df[time_column] - start_time
+        alloc_df["alloc_time"] += UNIX_TO_WINDOWS_EPOCH_DIFF_SECONDS * 1000000
+        free_df["free_time"] += UNIX_TO_WINDOWS_EPOCH_DIFF_SECONDS * 1000000
 
 def merge_alloc_free_info_to_obj_info(pid):
     all_data = os.listdir("./data")
@@ -59,8 +59,10 @@ def merge_alloc_free_info_to_obj_info(pid):
     free_df = pd.read_csv(free_data, dtype=datatype_myf)
     free_df = pd.DataFrame(free_df)
     
-    transform_time_to_readable(alloc_df, "alloc_time")
-    transform_time_to_readable(free_df, "freetime")
+    # Adjust time
+    transform_time_as_dr_use(alloc_df, free_df)
+    alloc_df["alloc_time"] -= starttime
+    free_df["free_time"] -= starttime
     # Merge "allocate" and "free" information to be "object" infomation
     obj_df = pd.merge(alloc_df, free_df, on='data_addr', how='left')
     obj_df = obj_df.dropna()
@@ -127,6 +129,7 @@ def main():
                                    dtype=datatype_miss)
     for df_chunk in miss_data_reader:
         print("data_merge.py : df_counk", chunk_count)
+        df_chunk['miss_time'] -= starttime
         df_chunk['data_addr'] = df_chunk.swifter.apply(
             lambda row: miss_addr_to_data_addr(row['miss_addr'], row['pid'], data_addrs), axis=1)
         # dump the result of this part to files
@@ -151,4 +154,11 @@ if __name__ == "__main__":
                         help="[online / offline]")
     args = parser.parse_args()
     
+    with open("./data/starttime", "r") as f:
+        starttime = f.readline()
+        starttime = int(starttime.strip())
+    with open("./data/endtime", "r") as f:
+        endtime = f.readline()
+        endtime = int(endtime.strip())
+        
     main()
