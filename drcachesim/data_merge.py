@@ -126,7 +126,7 @@ def main():
     miss_data_reader = pd.read_csv("./data/cachemisses.csv", chunksize=chunk_size, 
                                    dtype=datatype_miss)
     for df_chunk in miss_data_reader:
-        print("df_counk", chunk_count)
+        print("data_merge.py : df_counk", chunk_count)
         df_chunk['data_addr'] = df_chunk.swifter.apply(
             lambda row: miss_addr_to_data_addr(row['miss_addr'], row['pid'], data_addrs), axis=1)
         # dump the result of this part to files
