@@ -228,6 +228,10 @@ void* realloc(void* ori_addr, size_t new_size) {
     fprintf(stderr, "realloc %p %lu\n", ori_addr, new_size);
 #endif
 
+    if (ori_addr == NULL && new_size == 0) {
+        pthread_mutex_unlock(&malloc_mutex);
+        return NULL;
+    }
     if (!is_pool_init) pool_init();
 
     size_t ori_new_size = new_size;
