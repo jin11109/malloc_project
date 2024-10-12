@@ -7,11 +7,11 @@ if [ $# == 0 ]; then
 fi
 
 if [ ! "$1" = "online" ] && [ ! "$1" = "offline" ]; then
-    echo "choose profiling use in drcachesim [online/offline]"
+    echo "choose profiling mode use in drcachesim [online/offline]"
     exit 0
 fi
 
-# get target program paremeter
+# Get target program paremeter
 target_program=""
 for ((i = 2; i <= $#; i++)); do
     target_program="$target_program ${!i}"
@@ -21,7 +21,7 @@ done
 
 echo 0 | sudo tee /proc/sys/kernel/randomize_va_space > /dev/null
 
-# compile preload program
+# Compile preload program
 if [ "$1" = "online" ]; then
     gcc -shared -fPIC -O3 -pthread -DONLINE ./mymalloc.c -o ./mymalloc.so
 elif [ "$1" = "offline" ]; then
@@ -31,15 +31,9 @@ else
 fi
 sudo cp ./mymalloc.so /lib/
 
-# compile launcher to execute target program
+# Compile launcher to execute target program
 gcc -O3 ./launcher.c -o ./launcher || { 
     echo "ERROR : compile launcher.c fail";
-    exit 0;
-}
-
-# compile c to record start time
-gcc -O3 ./record_time.c -o ./record_time || { 
-    echo "ERROR : compile record_starttime.c fail";
     exit 0;
 }
 
@@ -51,7 +45,7 @@ echo -e "=============================================================\n\n"
 if [ "$1" = "online" ]; then
     python3 ./data_record.py --profiling_mode online &
     ../../mydynamorio/dynamorio/build/bin64/drrun -t drcachesim -LL_miss_file ./data/cachemisses.csv.gz -- ./launcher $target_program
-    # wait for ./data_record.py
+    # Wait for ./data_record.py
     wait
 
 elif [ "$1" = "offline" ]; then
@@ -63,7 +57,7 @@ elif [ "$1" = "offline" ]; then
     fi
     python3 ./data_record.py --profiling_mode offline &
     ../../mydynamorio/dynamorio/build/bin64/drrun -t drcachesim -offline -outdir ./dr_raw_data -- ./launcher  $target_program
-    # wait for ./data_record.py
+    # Wait for ./data_record.py
     wait
     echo "demo.sh : start simulate"
     ../../mydynamorio/dynamorio/build/bin64/drrun -t drcachesim -indir ./dr_raw_data/*$2* -LL_miss_file ./data/cachemisses.csv.gz
@@ -75,13 +69,13 @@ fi
 gzip -d ./data/cachemisses.csv.gz
 sed -i '1i miss_addr,pid,miss_time' ./data/cachemisses.csv
 
-# merge the data from LD_PRELOAD and drcachesim 
+# Merge the data from LD_PRELOAD and drcachesim 
 python3 ./data_merge.py --profiling_mode $1
 cp ./data/endtime ./result/
 cp ./data/starttime ./result/
 
-# show the result
-# python3 ./data_show.py
+# Show the result
+python3 ./data_show.py --profiling_mode $1
 
 rm ./fifo_preload
 echo 1 | sudo tee /proc/sys/kernel/randomize_va_space > /dev/null
