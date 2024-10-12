@@ -374,8 +374,6 @@ def main():
     groups_info = get_groups_info(obj_dfs, "group_id")
     groups_non_devide_info = get_groups_info(obj_dfs, "callchain0")
 
-    #print(groups_info[groups_info["score"] >= args.score_threshold])
-
     show_groups_score_distribution(groups_info, groups_non_devide_info, 
                                    "./result_picture/groups_score")
     show_groups_info(groups_info, groups_non_devide_info, "./result_picture/groups_info")
