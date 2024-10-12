@@ -13,6 +13,8 @@ import bisect
 import gc
 import argparse
 import swifter
+import dask.dataframe as dd
+from dask.diagnostics import ProgressBar
 
 # ptmalloc2 DEFAULT_MMAP_THRESHOLD
 MMAP_THRESHOLD = 128 * 1024
@@ -78,7 +80,8 @@ def merge_alloc_free_info_to_obj_info(pid):
     obj_df.to_csv(f"./result/obj_{pid}.csv", index=False, header=True)
     return obj_df
 
-def miss_addr_to_data_addr(miss_addr, pid, data_addrs):
+def miss_addr_to_data_addr(row, data_addrs):
+    miss_addr, pid = row['miss_addr'], row['pid']
     if data_addrs.get(pid) is None:
         return 0
 
@@ -130,18 +133,30 @@ def main():
     for df_chunk in miss_data_reader:
         print("data_merge.py : df_counk", chunk_count)
         df_chunk['miss_time'] -= starttime
-        df_chunk['data_addr'] = df_chunk.swifter.apply(
-            lambda row: miss_addr_to_data_addr(row['miss_addr'], row['pid'], data_addrs), axis=1)
-        # dump the result of this part to files
+        # Two ways of apply option for muti-process. Although dd is indeed muti-process 
+        # and swifter may not, swifter still faster than dd. But for bigger data I have 
+        # no idea witch is better.
+        if True:
+            df_chunk['data_addr'] = df_chunk.swifter.apply(
+                lambda row: miss_addr_to_data_addr(row, data_addrs), axis=1)
+        else:
+            ddf_chunk = dd.from_pandas(df_chunk, npartitions=32)
+            ddf_chunk["data_addr"] = ddf_chunk.apply(miss_addr_to_data_addr, axis=1, 
+                                                    args=(data_addrs,), 
+                                                    meta=('data_addr', 'i8'))
+            with ProgressBar():
+                df_chunk = ddf_chunk.compute()
+        
+        # Dump the result of this part to filess
+        df_chunk = df_chunk[df_chunk['data_addr'] != 0]
         for pid in pids:
             mask = df_chunk['pid'] == pid
-            mask2 = df_chunk['data_addr'] != 0
             if is_chunk_pid_first_seen.get(pid) is not None:
-                df_chunk[mask & mask2][['data_addr', 'miss_time']].to_csv(
+                df_chunk[mask][['data_addr', 'miss_time']].to_csv(
                     f"./result/miss_{pid}.csv", mode='a', header=False, index=False)
             else:
                 is_chunk_pid_first_seen[pid] = False
-                df_chunk[mask & mask2][['data_addr', 'miss_time']].to_csv(
+                df_chunk[mask][['data_addr', 'miss_time']].to_csv(
                     f"./result/miss_{pid}.csv", mode='a', header=True, index=False)
 
 
