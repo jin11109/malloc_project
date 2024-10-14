@@ -5,18 +5,18 @@ sleep 5
 end_time=$((1200))
 
 while [ $SECONDS -lt $end_time ]; do
-    xdotool type "Here is some example text for gedit. Let's add some operations to it."
+    xdotool type --delay 1000 "Here is some example text for gedit. Let's add some operations to it."
     xdotool key Return
     sleep 2
     
-    xdotool key Left Left Left Left Left
+    xdotool key --delay 1000 Left Left Left Left Left
     sleep 2
     xdotool keydown shift
-    xdotool key --delay 100 Left Left Left
+    xdotool key --delay 1000 Left Left Left
     xdotool keyup shift
     sleep 1
     xdotool key ctrl+c
-    sleep 1 for gedit. Le
+    sleep 1
     
     xdotool key Right
     xdotool key Return
@@ -25,11 +25,11 @@ while [ $SECONDS -lt $end_time ]; do
     xdotool key Return
     sleep 2
 
-    xdotool key Left Left
+    xdotool key --delay 1000 Left Left
     xdotool key BackSpace
     sleep 1
 
-    xdotool type "Adding some additional lines and content here."
+    xdotool type --delay 1000 "Adding some additional lines and content here."
     xdotool key Return
     sleep 2
 
@@ -38,7 +38,7 @@ while [ $SECONDS -lt $end_time ]; do
     sleep 2
     xdotool keydown shift
     sleep 1
-    xdotool key --delay 100 Right Right Right Right 
+    xdotool key --delay 1000 Right Right Right Right 
     xdotool keyup shift
     sleep 1
     xdotool key ctrl+x
