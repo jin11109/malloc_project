@@ -25,6 +25,7 @@ import copy
 import swifter
 import dask.dataframe as dd
 from dask.diagnostics import ProgressBar
+from matplotlib.colors import LogNorm
 
 LIFE_TIME_THRESHOLD = 100
 LONG_LIFE_TIME_PROPOTION = 0.8
@@ -39,8 +40,8 @@ BATHTUB_LOWER_BOUND = 1
 
 CONTINUE_NUM = 100000
 
-# 0~2 depth
-MAX_CALL_CHAIN_DEPTH = 2
+# 0~3 depth
+MAX_CALL_CHAIN_DEPTH = 3
 
 obj_dtype = {
     'alloc_type' : str,
@@ -131,13 +132,15 @@ def show_groups_score_distribution(groups_info, groups_non_devide_info, path):
     axs[0].set_title(f'Score distribution')
     axs[0].set_xlabel(f'Score')
     axs[0].set_ylabel('Number of Groups')
-    axs[0].set_xlim(0, 100)
 
     sns.histplot(x=groups_non_devide_info["score"], ax=axs[1], bins=bins)
     axs[1].set_title(f'Score distribution non devide')
     axs[1].set_xlabel(f'Score')
     axs[1].set_ylabel('Number of Groups')
-    axs[1].set_xlim(0, 100)
+
+    mask = groups_info["score"] >= args.score_threshold
+    info = f"\nNumber of groups : {len(groups_info[mask])}\n"
+    fig.text(0.2, 0.2, info, ha='left', va='top', fontsize=10, color='blue')
 
     plt.savefig(path)
     plt.close(fig)
@@ -159,13 +162,15 @@ def show_groups_info(groups_info, groups_non_devide_info, path):
     sns.barplot(y='memory_occupation', hue='is_suitable_for_swap', data=summarize_non_devide_info, ax=axs[1])
 
     axs[0].set_ylim(0, 100)
+    axs[0].set_ylabel('Propotion (%)')
+    axs[0].set_xlabel('Memory Occupation')
     axs[1].set_ylim(0, 100)
     for container in axs[0].containers:
         labels = [f"{float(v.get_height()):.2f}%" for v in container]
         axs[0].bar_label(container, labels=labels)
 
-    info = f"true size : {summarize_info['total_size']}\n"
-               
+    info = f"{summarize_info['total_size']}\n"
+
     fig.text(0.2, 0.2, info, ha='left', va='top', fontsize=10, color='blue')
 
     fig.savefig(path)
@@ -177,7 +182,7 @@ def show_max_non_access_time_distribution(obj_dfs, path):
     
     # Log yscale
     sns.histplot(x=obj_dfs["max_non_access_time"] / 1000000, ax=axs[0], bins=100)
-    axs[0].set_title(f'Max Non Access Time Distribution')
+    axs[0].set_title(f"Object's Max Non Access Time Distribution")
     axs[0].set_xlabel(f'Times (seconds)')
     axs[0].set_ylabel('Number of Objectss')
     axs[0].set_yscale('log')
@@ -193,29 +198,68 @@ def show_max_non_access_time_distribution(obj_dfs, path):
     plt.savefig(path)
     plt.close(fig)
 
-def show_realtime_access_distribution(groups_info, obj_dfs, miss_dfs, path):
-    suitable_mask = groups_info["is_suitable_for_swap"]
-    group_mask = obj_dfs["group_id"].isin(groups_info["group_id"][suitable_mask])
-    data_addr_mask = miss_dfs["data_addr"].isin(obj_dfs["data_addr"][group_mask])
+def show_realtime_access_distribution(data_addrs_suitable_swap, miss_dfs, path):
+    data_addr_mask = miss_dfs["data_addr"].isin(data_addrs_suitable_swap)
 
-    fig, axs = plt.subplots(1, 2, figsize=(10, 4), gridspec_kw={'bottom': 0.3, 'top': 0.9})
+    fig, axs = plt.subplots(1, 2, figsize=(10, 4), gridspec_kw={'bottom': 0.3, 'top': 0.8})
     plt.subplots_adjust(wspace=0.3)
     
     # For suitable swap objs
     sns.histplot(x=miss_dfs["miss_time"][data_addr_mask] / 1000000, ax=axs[0], bins=100)
-    axs[0].set_title(f'For suitable swap objs')
+    axs[0].set_title(f'Real DRAM Access Time\nFor Objects in Suitable Swap Groups')
     axs[0].set_xlabel(f'Times (seconds)')
-    axs[0].set_ylabel('Number of Access Event Occur')
+    axs[0].set_ylabel('Number of\nDRAM Access Event Occur')
     axs[0].set_yscale('log')
     axs[0].set_ylim(1, None)
 
     # For total objs
     sns.histplot(x=miss_dfs["miss_time"] / 1000000, ax=axs[1], bins=100)
-    axs[1].set_title(f'For total objs')
+    axs[1].set_title(f'Real DRAM Access Time\nFor Total Objects')
     axs[1].set_xlabel(f'Times (seconds)')
-    axs[1].set_ylabel('Number of Access Event Occur')
-    axs[1].set_ylim(0, None)
+    axs[1].set_ylabel('Number of\nDRAM Access Event Occur')
+    axs[1].set_yscale('log')
+    axs[1].set_ylim(1, None)
 
+    plt.savefig(path)
+    plt.close(fig)
+
+def show_non_access_time_heatmap(data_addrs_suitable_swap, obj_dfs, miss_dfs, path):
+    def calc_non_access_time_hists(row, objs_access_times, bins):
+        alloc_time, free_time, data_addr, size = row['alloc_time'], row['free_time'], row['data_addr'], row['size']
+        times = objs_access_times.get(data_addr)
+        times = np.array(times) / 1000000 / 4
+        hist = np.zeros(bins)
+        start_bin = int(np.floor(alloc_time / 1000000 / 4))
+        end_bin = int(np.ceil(free_time / 1000000 / 4))
+        hist[start_bin:end_bin] = size
+        hist[np.array(list(set(np.floor(times)))).astype(int)] = 0
+        return hist
+    
+    bins = math.ceil((endtime - starttime) / 1000000 / 4) + 1
+    miss_dfs = miss_dfs[miss_dfs["data_addr"].isin(data_addrs_suitable_swap)]
+    obj_dfs = obj_dfs[obj_dfs["data_addr"].isin(data_addrs_suitable_swap)]
+    objs_access_times = miss_dfs.groupby('data_addr')['miss_time'].apply(list).to_dict()
+    print("data_show.py : processing non access time heatmap")
+    non_access_time_hists = obj_dfs.swifter.apply(
+        lambda row: calc_non_access_time_hists(row, objs_access_times, bins), axis=1).to_numpy()
+    non_access_time_hist = np.sum(non_access_time_hists, axis=0)
+    non_access_time_hist = np.log1p(non_access_time_hist)
+    access_time_hist, _ = np.histogram(miss_dfs["miss_time"], bins=bins)
+    access_time_hist = np.log1p(access_time_hist)
+
+    non_access_time_df = pd.DataFrame({'non_access': non_access_time_hist})
+    access_time_df = pd.DataFrame({'access' : access_time_hist})
+    fig, axs = plt.subplots(2, 1, figsize=(8, 5), gridspec_kw={'bottom': 0.3, 'top': 0.9})
+    plt.subplots_adjust(wspace=0.3)
+    #sns.heatmap(non_access_time_df.T, cmap="crest", ax=axs[0], norm=LogNorm())
+    sns.heatmap(non_access_time_df.T, cmap="crest", ax=axs[0], xticklabels=False)
+    sns.heatmap(access_time_df.T, ax=axs[1])
+    #axs[0].set_title(f'Real DRAM Access Time\nFor Objects in Suitable Swap Groups')
+    #axs[0].set_xlabel('Time (seconds)')
+    axs[1].set_xlabel('Time (seconds)')
+    #axs[1].set_xticklabels(np.arange(bins) * 4)
+    #axs[0].set_ylabel('Program')
+    
     plt.savefig(path)
     plt.close(fig)
 
@@ -327,14 +371,19 @@ def get_groups_info(obj_dfs, group_column):
     groups_info["is_suitable_for_swap"] = groups_info["score"] >= args.score_threshold
     return groups_info
 
+def get_data_addr_of_objs_in_suitable_swap_groups(groups_info, obj_dfs):
+    suitable_mask = groups_info["is_suitable_for_swap"]
+    group_mask = obj_dfs["group_id"].isin(groups_info["group_id"][suitable_mask])
+    return obj_dfs["data_addr"][group_mask].to_list()
+
 def main():
     global endtime, starttime, args
     with open("./result/endtime", "r") as f:
         endtime = f.readline()
         endtime = int(endtime.strip())
     with open("./result/starttime", "r") as f:
-        start_time = f.readline()
-        start_time = int(start_time.strip())
+        starttime = f.readline()
+        starttime = int(starttime.strip())
 
     pids = {}
     
@@ -360,8 +409,10 @@ def main():
             add_max_non_access_time_colunm(obj_df, miss_df, f"./result/obj_{pid}.csv")
 
         if args.have_group_id == False:
-            add_group_id_column(obj_df, pid, f"./result/obj_{pid}.csv")
-        
+            #add_group_id_column(obj_df, pid, f"./result/obj_{pid}.csv")
+            obj_df["group_id"] = str(pid) + obj_df["size"].astype(str) + obj_df["callchain0"].astype(str) + \
+                                 obj_df["callchain1"].astype(str) + obj_df["callchain2"].astype(str) + obj_df["callchain3"].astype(str) 
+
         # XXX : This way may spend a lot of memory. Considering Using histogram and free
         # the reference of obj_df and free_df.
         obj_dfs.append(obj_df)
@@ -378,8 +429,11 @@ def main():
                                    "./result_picture/groups_score")
     show_groups_info(groups_info, groups_non_devide_info, "./result_picture/groups_info")
     show_max_non_access_time_distribution(obj_dfs, "./result_picture/max_non_access_time")
-    show_realtime_access_distribution(groups_info, obj_dfs, miss_dfs, 
+    data_addrs_suitable_swap = get_data_addr_of_objs_in_suitable_swap_groups(groups_info, obj_dfs)
+    show_realtime_access_distribution(data_addrs_suitable_swap, miss_dfs, 
                                       "./result_picture/realtime_access")
+    show_non_access_time_heatmap(data_addrs_suitable_swap, obj_dfs, miss_dfs, 
+                                 "./result_picture/non_access_heatmap")
 
 
 if __name__ == "__main__":
