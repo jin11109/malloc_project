@@ -3,7 +3,7 @@
 #define MEGA << 20
 #define KILO << 10
 #define MEMPOOL_SIZE (((uint64_t)4)GIGA)
-#define MAX_DEPTH_OF_CALL_CHAIN 4
+#define MAX_DEPTH_OF_CALL_CHAIN 12
 
 #include <assert.h>
 #include <dlfcn.h>
@@ -100,9 +100,12 @@ void print_info_alloc(pid_t pid, size_t size, void* addr, void* return_addrs[],
      *      r means 'realloc'
      *      c means 'calloc'
      */
-    fprintf(stderr, "mya %c %d %lu %p %lu %p %p %p %p\n", type, pid, size, addr,
-            get_program_time(), return_addrs[0], return_addrs[1],
-            return_addrs[2], return_addrs[3]);
+    fprintf(stderr,
+            "mya %c %d %lu %p %lu %p %p %p %p %p %p %p %p %p %p %p %p\n", type,
+            pid, size, addr, get_program_time(), return_addrs[0],
+            return_addrs[1], return_addrs[2], return_addrs[3], return_addrs[4],
+            return_addrs[5], return_addrs[6], return_addrs[7], return_addrs[8],
+            return_addrs[9], return_addrs[10], return_addrs[11]);
 }
 
 /*============================ memory pool operations ======================
@@ -249,8 +252,7 @@ void* realloc(void* ori_addr, size_t new_size) {
             is_in_backtrace_func = true;
 
             void* return_addrs[MAX_DEPTH_OF_CALL_CHAIN];
-            int depth;
-            depth = backtrace(return_addrs, MAX_DEPTH_OF_CALL_CHAIN);
+            int depth = backtrace(return_addrs, MAX_DEPTH_OF_CALL_CHAIN);
             for (int i = MAX_DEPTH_OF_CALL_CHAIN - 1; i > depth - 1; i--) {
                 return_addrs[i] = (void*)1;
             }
@@ -269,8 +271,8 @@ void* realloc(void* ori_addr, size_t new_size) {
             is_in_backtrace_func = true;
 
             void* return_addrs[MAX_DEPTH_OF_CALL_CHAIN];
-            int depth;
-            depth = backtrace(return_addrs, MAX_DEPTH_OF_CALL_CHAIN);
+            int depth = backtrace(return_addrs, MAX_DEPTH_OF_CALL_CHAIN);
+            return_addrs[0] = __builtin_return_address(0);
             for (int i = MAX_DEPTH_OF_CALL_CHAIN - 1; i > depth - 1; i--) {
                 return_addrs[i] = (void*)1;
             }
@@ -314,8 +316,7 @@ void* calloc(size_t count, size_t size) {
         is_in_backtrace_func = true;
 
         void* return_addrs[MAX_DEPTH_OF_CALL_CHAIN];
-        int depth;
-        depth = backtrace(return_addrs, MAX_DEPTH_OF_CALL_CHAIN);
+        int depth = backtrace(return_addrs, MAX_DEPTH_OF_CALL_CHAIN);
         for (int i = MAX_DEPTH_OF_CALL_CHAIN - 1; i > depth - 1; i--) {
             return_addrs[i] = (void*)1;
         }

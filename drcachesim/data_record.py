@@ -7,6 +7,7 @@ import time
 
 # Difference between 1970 and 1601 in seconds
 UNIX_TO_WINDOWS_EPOCH_DIFF_SECONDS = 11644473600
+MAX_DEPTH_OF_CALL_CHAIN = 12
 
 # Files to record preload function output
 files = {}
@@ -77,7 +78,11 @@ def main():
             if files.get(filename) is None:
                 files[filename] = filepath
                 if info[0] == "mya":
-                    write_data(["alloc_type", "size", "data_addr", "alloc_time", "callchain0", "callchain1", "callchain2", "callchain3"], filename)
+                    write_data(["alloc_type", "size", "data_addr", "alloc_time", 
+                                "callchain0", "callchain1", "callchain2", "callchain3", 
+                                "callchain4", "callchain5", "callchain6", "callchain7", 
+                                "callchain8", "callchain9", "callchain10", "callchain11"],
+                               filename)
                 elif info[0] == "myf":
                     write_data(["free_type", "data_addr", "free_time"], filename)
 
@@ -86,11 +91,10 @@ def main():
                 size = int(info[3], 10)
                 data_addr = int(info[4], 16)
                 alloc_time = int(info[5], 10)
-                callchain0 = int(info[6], 16)
-                callchain1 = int(info[7], 16)
-                callchain2  = int(info[8], 16)
-                callchain3 = int(info[9], 16)
-                write_data([type_, size, data_addr, alloc_time, callchain0, callchain1, callchain2, callchain3], filename)
+                output_data = [type_, size, data_addr, alloc_time]
+                for i in range(6, 6 + MAX_DEPTH_OF_CALL_CHAIN):
+                    output_data.append(int(info[i], 16))
+                write_data(output_data, filename)
             
             elif info[0] == "myf":
                 type_ = info[1]
