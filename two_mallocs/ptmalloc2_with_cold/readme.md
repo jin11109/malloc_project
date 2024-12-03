@@ -36,7 +36,7 @@ int main() {
     if (is_flag_mmapped(ptr)) {
         printf("This new memory is allocated directly by mmap\n");
     } else if (is_flag_notmy(ptr)) {
-        printf("The address, ptr_from_system_glibc, is not allocated by the _my_ version\n");
+        printf("The address, ptr, is not allocated by the _my_ version\n");
     } else {
         printf("This means it uses _my_realloc to allocate memory and does not directly use mmap\n");
     }
