@@ -23,7 +23,7 @@ After this, *libptmalloc2_with_cold.so* will occur in *ptmalloc2_with_cold* fold
 
 There is a simple C example for using this ptmalloc2
 ```c
-/* You should put ptmalloc2_with_cold folder in your root of workplace first */
+/* You should place the ptmalloc2_with_cold folder at the root of your workspace first */
 #include <stdio.h>
 /* System glibc malloc */
 #include <malloc.h>
@@ -34,15 +34,15 @@ int main() {
     int* ptr_from_system_glibc = malloc(sizeof(int));
     void* ptr = _my_realloc(ptr_from_system_glibc, sizeof(int) * 2);
     if (is_flag_mmapped(ptr)) {
-        printf("This new memory is alloced directly by mmap\n");
+        printf("This new memory is allocated directly by mmap\n");
     } else if (is_flag_notmy(ptr)) {
-        printf("The address, ptr_from_system_glibc, is not alloced by _my_ version\n");
+        printf("The address, ptr_from_system_glibc, is not allocated by the _my_ version\n");
     } else {
-        printf("This represent it use _my_realloc to alloc memory and not directly use mmap\n");
+        printf("This means it uses _my_realloc to allocate memory and does not directly use mmap\n");
     }
 
-    /* For using this return value, you should unable flag first*/
-    int* int_array = (int*)(unable_flag(ptr));
+    /* To use this return value, you should disable the flag first */
+    int* int_array = (int*)(disable_flag(ptr));
 }
 ```
 
