@@ -7,7 +7,7 @@ if [ $# == 0 ]; then
 fi
 
 if [ ! "$1" = "online" ] && [ ! "$1" = "offline" ]; then
-    echo "choose profiling mode use in drcachesim [online/offline]"
+    echo "choose profiling mode used in drcachesim [online/offline]"
     exit 0
 fi
 
@@ -59,14 +59,26 @@ elif [ "$1" = "offline" ]; then
     ../../mydynamorio/dynamorio/build/bin64/drrun -t drcachesim -offline -outdir ./dr_raw_data -- ./launcher  $target_program
     # Wait for ./data_record.py
     wait
+
+    # Simulate for each pid-dir
     echo "demo.sh : start simulate"
-    ../../mydynamorio/dynamorio/build/bin64/drrun -t drcachesim -indir ./dr_raw_data/*$2* -LL_miss_file ./data/cachemisses.csv.gz
+    dir_count=0
+    for dr_dir in ./dr_raw_data/*; do
+        if [ -d "$dr_dir" ]; then
+            echo demo.sh : simulating $dr_dir $dir_count
+            ../../mydynamorio/dynamorio/build/bin64/drrun -t drcachesim -indir $dr_dir -LL_miss_file ./data/cachemisses$dir_count.csv.gz
+            dir_count=$((dir_count + 1))
+        fi
+    done
 
 else
     exit 0
 fi
 
-gzip -d ./data/cachemisses.csv.gz
+# Concat all cachmisses csv files
+for file in ./data/cachemisses*.csv.gz; do
+    zcat $file >> ./data/cachemisses.csv
+done
 sed -i '1i miss_addr,pid,miss_time' ./data/cachemisses.csv
 
 # Merge the data from LD_PRELOAD and drcachesim 
