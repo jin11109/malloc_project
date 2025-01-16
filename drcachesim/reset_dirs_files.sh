@@ -34,3 +34,7 @@ fi
 if [ -f "./timmer" ]; then
     rm ./timmer
 fi
+
+if [ -f "./data/cachemisses.csv" ]; then
+    rm ./data/cachemisses.csv
+fi
